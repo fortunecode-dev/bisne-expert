@@ -1,105 +1,123 @@
-# CatalogOS — Catalog of Catalogs
+# CatalogOS
 
-A fully static Next.js app for digital business catalogs with WhatsApp ordering.
+Catálogo de negocios con panel de administración.
 
-## Features
+## Stack
+- **Next.js 14** (modo servidor)
+- **Vercel Blob** para imágenes y datos en producción
+- **Filesystem local** para imágenes y datos en desarrollo
+- **Middleware** para proteger `/admin` con contraseña
 
-- 🏪 Multi-business catalog
-- 🌍 Bilingual (ES/EN)
-- 🛒 Per-business cart with localStorage persistence
-- 🔗 Shareable cart URLs (`/view/[slug]?c=1x2,3x1`)
-- 💬 WhatsApp ordering
-- 💛 Donation QR support
-- ⚙️ Admin panel (hidden at `/admin`)
-- 📤 Export ZIP with all data
-- 📥 Import businesses.json
-- 🔍 SEO: generateStaticParams + generateMetadata
+---
 
-## Quick Start
+## Desarrollo local
 
 ```bash
+cp .env.local.example .env.local
+# Edita .env.local → pon ADMIN_PASSWORD
+
 npm install
 npm run dev
+# http://localhost:3000
+# Panel: http://localhost:3000/admin
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+En local, **no necesitas** `BLOB_READ_WRITE_TOKEN`.  
+Los datos se leen/escriben en `data/` y las imágenes en `public/uploads/`.
 
-## Build & Export (static site)
+---
+
+## Deploy en Vercel
+
+### 1. Configura el Blob Store
+
+En el dashboard de Vercel:  
+`Settings → Storage → Create Database → Blob`
+
+Vercel agrega automáticamente `BLOB_READ_WRITE_TOKEN` a las env vars del proyecto.
+
+### 2. Variables de entorno en Vercel
+
+```
+ADMIN_PASSWORD=tu-contrasena-muy-segura
+```
+(BLOB_READ_WRITE_TOKEN la agrega Vercel automáticamente)
+
+### 3. Sube los datos iniciales al Blob
+
+Después del primer deploy, ejecuta el seed localmente con tu token:
 
 ```bash
-npm run build
-# Output in /out directory — ready to deploy to any static host
+# En .env.local agrega temporalmente:
+# BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxxxx   ← cópialo del dashboard de Vercel
+
+npm run seed-blob
 ```
 
-## Project Structure
+Esto sube todos los `.json` de `data/` al Blob Store.  
+Las **imágenes** se suben desde el panel de admin después del deploy.
+
+---
+
+## Backup
+
+Desde el panel de admin (`/admin`), el botón **💾 Backup** descarga un `.zip` con:
 
 ```
-/app
-  page.tsx              # Home: business list
-  /business/[slug]/     # Business catalog page
-  /view/[slug]/         # Shared cart view
-  /admin/               # Hidden admin panel
-
-/components
-  /business/            # BusinessCard
-  /product/             # ProductCard, CategoryFilter
-  /cart/                # CartSheet, CartButton
-  /ui/                  # LangToggle, Button, Badge
-
-/data
-  businesses.json       # All businesses
-  /business/*.json      # Business details
-  /products/*.json      # Products per business
-
-/hooks
-  useCart.ts            # Cart state + localStorage
-  useLang.ts            # Language state
-
-/lib
-  data.ts               # Data loaders + indexes
-  cart.ts               # Cart CRUD
-
-/types
-  index.ts              # All TypeScript types
+catalogos-backup-2025-03-10_14-30.zip
+├── data/
+│   ├── businesses.json
+│   ├── config.json
+│   ├── business/
+│   │   ├── burger-house.json
+│   │   └── pizza-palace.json
+│   └── products/
+│       ├── burger-house.json
+│       └── pizza-palace.json
+└── public/
+    └── uploads/
+        ├── 1234-burger-logo.jpg
+        └── 5678-pizza-cover.png
 ```
 
-## Adding a New Business
+Para restaurar en local: extrae el zip en la raíz del proyecto.  
+Para restaurar en producción: vuelve a correr `npm run seed-blob` con los JSON restaurados.
 
-1. Add entry to `data/businesses.json`
-2. Create `data/business/[slug].json`
-3. Create `data/products/[slug].json`
+---
 
-## Cart URL Format
+## Arquitectura de storage
 
 ```
-/view/burger-house?c=1x2,3x1,5x4
+┌─────────────────────────────────────────────────────┐
+│                  lib/storage.ts                      │
+│           (StorageDriver interface)                  │
+│  getDriver() → BlobDriver si BLOB_READ_WRITE_TOKEN   │
+│             → FsDriver   si no hay token             │
+└──────────────┬──────────────────┬───────────────────┘
+               │                  │
+    ┌──────────▼──────┐  ┌────────▼────────┐
+    │  storage.blob   │  │   storage.fs    │
+    │  (Vercel Blob)  │  │  (filesystem)   │
+    │  producción     │  │  desarrollo     │
+    └─────────────────┘  └─────────────────┘
+               │
+    ┌──────────▼────────────────────────────┐
+    │  /api/data   /api/upload  /api/backup │
+    │  (únicos puntos de acceso a storage)  │
+    └───────────────────────────────────────┘
 ```
-`productId x quantity` pairs, comma-separated.
 
-## Shareable Cart
+## Rutas
 
-In the cart sheet, click "Share" to copy the URL. Anyone opening it sees the same cart reconstructed from the URL.
-
-## WhatsApp Ordering
-
-The cart generates a WhatsApp link using:
-```
-https://wa.me/PHONE?text=ENCODED_MESSAGE
-```
-Message includes item list, totals, and the shareable cart URL.
-
-## Admin Panel
-
-Visit `/admin` to:
-- View/hide/delete businesses
-- Manage products per business
-- Import `businesses.json`
-- Export a ZIP with all JSON data
-
-## Deployment
-
-Since `output: 'export'` is set in `next.config.js`, run:
-```bash
-npm run build
-```
-Then deploy the `/out` folder to Netlify, Vercel, GitHub Pages, etc.
+| Ruta | Descripción |
+|------|-------------|
+| `/` | Catálogo de negocios |
+| `/{slug}` | Catálogo de un negocio |
+| `/view/{slug}` | Pedido compartido |
+| `/admin` | Panel de administración (requiere contraseña) |
+| `/login` | Login del admin |
+| `/api/data` | CRUD de datos JSON |
+| `/api/upload` | Subida de imágenes |
+| `/api/backup` | Descarga backup ZIP |
+| `/api/auth/login` | Autenticación |
+| `/api/auth/logout` | Cerrar sesión |

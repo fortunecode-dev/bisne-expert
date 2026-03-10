@@ -11,7 +11,7 @@
         "en": "Una rosa muy bonita enmarcada con lucesitas"
       },
       "price": 1000,
-      "image": "/uploads/1.jpg",
+      "image": "/resources/detalles-dani/1.jpg",
       "imageKeywords": [],
       "category": {
         "es": "rosas",
@@ -54,7 +54,7 @@
         "en": "Flores hechas a mano con papel que no me se el nombre todavía"
       },
       "price": 1500,
-      "image": "/uploads/2.jpg",
+      "image": "/resources/detalles-dani/2.jpg",
       "imageKeywords": [],
       "category": {
         "es": "ramos",

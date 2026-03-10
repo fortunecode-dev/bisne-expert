@@ -1990,6 +1990,24 @@ export default function AdminPage() {
     window.location.href = '/login'
   }
 
+  const handleBackup = async () => {
+    showToast('⏳ Generando backup…')
+    try {
+      const res = await fetch('/api/backup')
+      if (!res.ok) { showToast('⚠️ Error al generar backup'); return }
+      const blob = await res.blob()
+      const cd = res.headers.get('content-disposition') ?? ''
+      const filename = cd.match(/filename="(.+?)"/)?.[1] ?? 'catalogos-backup.zip'
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = filename; a.click()
+      URL.revokeObjectURL(url)
+      showToast('✓ Backup descargado')
+    } catch {
+      showToast('⚠️ Error al descargar backup')
+    }
+  }
+
   const selectedProducts = selectedSlug ? (products[selectedSlug] ?? []) : [];
 
   if (loading) return (
@@ -2088,6 +2106,14 @@ export default function AdminPage() {
             }}
           >
             📥 Importar
+          </button>
+          <button
+            onClick={handleBackup}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80 transition-all"
+            style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
+            title="Descargar backup ZIP de todos los datos e imágenes"
+          >
+            💾 Backup
           </button>
           <button
             onClick={handleLogout}

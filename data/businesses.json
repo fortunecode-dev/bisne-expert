@@ -15,7 +15,11 @@
       "image": "",
       "hidden": false,
       "sponsored": true,
-      "categories": ["Comida", "Hamburguesas", "Fast Food"],
+      "categories": [
+        "Comida",
+        "Hamburguesas",
+        "Fast Food"
+      ],
       "seo": {
         "title": {
           "es": "Burger House - Hamburguesas Artesanales",
@@ -25,7 +29,11 @@
           "es": "Catálogo de hamburguesas artesanales.",
           "en": "Artisan burger catalog."
         },
-        "keywords": ["burger", "hamburguesas", "artisan"]
+        "keywords": [
+          "burger",
+          "hamburguesas",
+          "artisan"
+        ]
       }
     },
     {
@@ -43,7 +51,11 @@
       "image": "",
       "hidden": false,
       "sponsored": false,
-      "categories": ["Comida", "Pizza", "Italiana"],
+      "categories": [
+        "Comida",
+        "Pizza",
+        "Italiana"
+      ],
       "seo": {
         "title": {
           "es": "Pizza Palace - Pizzas al Horno de Leña",
@@ -53,7 +65,11 @@
           "es": "Pizzas italianas tradicionales.",
           "en": "Traditional Italian pizzas."
         },
-        "keywords": ["pizza", "italian", "wood-fired"]
+        "keywords": [
+          "pizza",
+          "italian",
+          "wood-fired"
+        ]
       }
     },
     {
@@ -67,8 +83,8 @@
         "es": "Detalles y manualidades románticas para sorprender a esa persona especial en cualquier ocasión.",
         "en": "Romantic crafts and gifts to delight your special someone on any occasion."
       },
-      "logo": "/uploads/logo.jpg",
-      "image": "/uploads/portada.jpg",
+      "logo": "/uploads/1773177474845-detalles-dani-logo.jpg",
+      "image": "/uploads/1773177478713-detalles-dani-cover.jpg",
       "hidden": false,
       "seo": {
         "title": {
@@ -79,10 +95,14 @@
           "es": "Detalles y manualidades románticas para sorprender a esa persona especial en cualquier ocasión.",
           "en": "Romantic crafts and gifts to delight your special someone on any occasion."
         },
-        "keywords": ["handmade"]
+        "keywords": [
+          "handmade"
+        ]
       },
       "sponsored": true,
-      "categories": ["manualidades"]
+      "categories": [
+        "manualidades"
+      ]
     }
   ]
 }
