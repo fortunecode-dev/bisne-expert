@@ -1,0 +1,38 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": {
+        "es": "node",
+        "en": ""
+      },
+      "description": {
+        "es": "test",
+        "en": ""
+      },
+      "price": 100,
+      "image": "/uploads/1773173117006-product.png",
+      "imageKeywords": [],
+      "category": {
+        "es": "",
+        "en": ""
+      },
+      "featured": false,
+      "hidden": false,
+      "available": true,
+      "position": 1,
+      "tags": [],
+      "seo": {
+        "title": {
+          "es": "",
+          "en": ""
+        },
+        "description": {
+          "es": "",
+          "en": ""
+        },
+        "keywords": []
+      }
+    }
+  ]
+}

@@ -1,8 +1,7 @@
 import { headers } from 'next/headers'
 import { fetchBusinesses, fetchBusinessDetail, fetchProducts } from '@/lib/api'
-import { ViewPageClient } from './ViewPageClient'
+import { BusinessPageClient } from '../business/[slug]/BusinessPageClient'
 import type { Metadata } from 'next'
-import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
@@ -18,13 +17,22 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const base = getBaseUrl()
   const businesses = await fetchBusinesses(base)
   const business = businesses.find(b => b.slug === params.slug)
+  if (!business) return { title: 'No encontrado' }
   return {
-    title: (business?.name.es || params.slug) + ' - Pedido compartido',
-    description: 'Ver y editar pedido compartido',
+    title: business.seo?.title?.es || business.name.es,
+    description: business.seo?.description?.es || business.description?.es,
+    keywords: business.seo?.keywords,
+    openGraph: {
+      title: business.seo?.title?.es || business.name.es,
+      description: business.seo?.description?.es || business.description?.es,
+    },
   }
 }
 
-export default async function ViewPage({ params }: { params: { slug: string } }) {
+export default async function BusinessPage({ params }: { params: { slug: string } }) {
+  const reserved = ['admin', 'login', 'view', 'api', '_next']
+  if (reserved.includes(params.slug)) notFound()
+
   const base = getBaseUrl()
   const businesses = await fetchBusinesses(base)
   const business = businesses.find(b => b.slug === params.slug)
@@ -37,9 +45,5 @@ export default async function ViewPage({ params }: { params: { slug: string } })
 
   const visibleProducts = products.filter(p => !p.hidden)
 
-  return (
-    <Suspense fallback={<div className="p-8 text-center" style={{ color: 'var(--color-text)' }}>Cargando…</div>}>
-      <ViewPageClient business={business} detail={detail} products={visibleProducts} slug={params.slug} />
-    </Suspense>
-  )
+  return <BusinessPageClient business={business} detail={detail} products={visibleProducts} slug={params.slug} />
 }

@@ -1,0 +1,89 @@
+{
+  "slug": "test",
+  "province": "",
+  "municipality": "",
+  "address": {
+    "es": "",
+    "en": ""
+  },
+  "phone": "",
+  "cardNumber": "",
+  "paymentMethods": [
+    "cash"
+  ],
+  "donationsEnabled": false,
+  "website": "",
+  "schedule": {
+    "alwaysOpen": false,
+    "days": {
+      "monday": {
+        "closed": false,
+        "h24": false,
+        "open": "09:00",
+        "close": "22:00"
+      },
+      "tuesday": {
+        "closed": false,
+        "h24": false,
+        "open": "09:00",
+        "close": "22:00"
+      },
+      "wednesday": {
+        "closed": false,
+        "h24": false,
+        "open": "09:00",
+        "close": "22:00"
+      },
+      "thursday": {
+        "closed": false,
+        "h24": false,
+        "open": "09:00",
+        "close": "22:00"
+      },
+      "friday": {
+        "closed": false,
+        "h24": false,
+        "open": "09:00",
+        "close": "22:00"
+      },
+      "saturday": {
+        "closed": false,
+        "h24": false,
+        "open": "10:00",
+        "close": "23:00"
+      },
+      "sunday": {
+        "closed": false,
+        "h24": false,
+        "open": "10:00",
+        "close": "20:00"
+      }
+    }
+  },
+  "currency": "USD",
+  "socialLinks": {},
+  "palette": {
+    "name": "Amber Night",
+    "accent": "#f97316",
+    "accentText": "#ffffff",
+    "accentSoft": "#fff7ed",
+    "bg": "#0f0f0f",
+    "surface": "#1a1a1a",
+    "surface2": "#242424",
+    "border": "#2e2e2e",
+    "text": "#f0ece4",
+    "textMuted": "#888888",
+    "priceColor": "#fbbf24"
+  },
+  "seo": {
+    "title": {
+      "es": "",
+      "en": ""
+    },
+    "description": {
+      "es": "",
+      "en": ""
+    },
+    "keywords": []
+  }
+}

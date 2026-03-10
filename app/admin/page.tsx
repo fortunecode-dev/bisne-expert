@@ -22,13 +22,7 @@ import {
   HOLIDAY_PALETTES,
   applyGlobalPalette,
 } from "@/lib/palette";
-import {
-  loadConfig,
-  saveConfig,
-  getCustomPalettes,
-  saveCustomPalette,
-  deleteCustomPalette,
-} from "@/lib/config";
+// Config and custom palettes are persisted via /api/data on the server
 import { getL } from "@/lib/data";
 import { isOpenNow, DAY_NAMES_ES } from "@/lib/schedule";
 import Link from "next/link";
@@ -252,20 +246,36 @@ function ImgUpload({
   label,
   value,
   onChange,
-  keywords = [],
+  nameHint = "",
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  keywords?: string[];
+  nameHint?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  const handleFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => onChange(e.target?.result as string);
-    reader.readAsDataURL(file);
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      if (nameHint) fd.append("name", nameHint);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      if (res.ok) {
+        const { url } = await res.json();
+        onChange(url);
+      } else {
+        alert("Error al subir imagen al servidor");
+      }
+    } catch {
+      alert("Error de conexión");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -279,28 +289,26 @@ function ImgUpload({
       <div
         className="relative rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden"
         style={{
-          borderColor: drag
-            ? "var(--color-accent)"
-            : value
-              ? "var(--color-accent)"
-              : "var(--color-border)",
+          borderColor: drag ? "var(--color-accent)" : value ? "var(--color-accent)" : "var(--color-border)",
           minHeight: value ? "auto" : 90,
           background: "var(--color-surface-2)",
         }}
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDrag(true);
-        }}
+        onClick={() => !uploading && inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => {
           e.preventDefault();
           setDrag(false);
           const f = e.dataTransfer.files[0];
-          if (f?.type.startsWith("image/")) handleFile(f);
+          if (f) handleFile(f);
         }}
       >
-        {value ? (
+        {uploading ? (
+          <div className="py-6 text-center">
+            <div className="text-2xl mb-1">⏳</div>
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Subiendo al servidor…</p>
+          </div>
+        ) : value ? (
           <>
             <img src={value} alt="" className="w-full max-h-36 object-cover" />
             <div className="absolute inset-0 bg-black/0 hover:bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-all">
@@ -313,7 +321,7 @@ function ImgUpload({
           <div className="py-5 text-center">
             <div className="text-2xl mb-1">📷</div>
             <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              Arrastra o haz click
+              Arrastra o haz click · se sube al servidor
             </p>
           </div>
         )}
@@ -330,12 +338,17 @@ function ImgUpload({
         />
       </div>
       <input
-        value={value.startsWith("data:") ? "" : value}
+        value={value.startsWith("/uploads/") || value === "" ? "" : value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="O pega URL..."
+        placeholder="O pega URL externa…"
         className={`${inputCls} text-xs`}
         style={inputStyle}
       />
+      {value.startsWith("/uploads/") && (
+        <p className="text-xs font-semibold" style={{ color: "var(--color-accent)" }}>
+          ✓ Imagen guardada en el servidor
+        </p>
+      )}
     </div>
   );
 }
@@ -664,24 +677,33 @@ function PaletteEditor({
   const [customName, setCustomName] = useState(palette.name ?? "");
   const [savedCustom, setSavedCustom] = useState<
     { name: string; palette: BusinessPalette }[]
-  >(() => {
-    try {
-      return getCustomPalettes();
-    } catch {
-      return [];
-    }
-  });
+  >([]);
 
-  const saveCustom = () => {
+  // Load custom palettes from config on mount
+  useEffect(() => {
+    fetch('/api/data?file=config').then(r => r.ok ? r.json() : null).then(cfg => {
+      if (cfg?.customPalettes) setSavedCustom(cfg.customPalettes)
+    }).catch(() => {})
+  }, [])
+
+  const saveCustom = async () => {
     const name = customName.trim() || "Mi paleta";
-    const updated = saveCustomPalette(name, palette);
-    setSavedCustom(updated);
-    onChange({ ...palette, name });
+    const entry = { name, palette: { ...palette, name } }
+    const updated = [...savedCustom.filter(p => p.name !== name), entry]
+    setSavedCustom(updated)
+    onChange({ ...palette, name })
+    // Persist to server — merge into existing config
+    const cfg = await fetch('/api/data?file=config').then(r => r.ok ? r.json() : {}).catch(() => ({}))
+    await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file: 'config', data: { ...cfg, customPalettes: updated } }) })
   };
 
-  const deleteCustom = (name: string) => {
-    const updated = deleteCustomPalette(name);
-    setSavedCustom(updated);
+  const deleteCustom = async (name: string) => {
+    const updated = savedCustom.filter(p => p.name !== name)
+    setSavedCustom(updated)
+    const cfg = await fetch('/api/data?file=config').then(r => r.ok ? r.json() : {}).catch(() => ({}))
+    await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file: 'config', data: { ...cfg, customPalettes: updated } }) })
   };
 
   const fields: { key: keyof BusinessPalette; label: string }[] = [
@@ -1217,7 +1239,7 @@ function ProductModal({
               label="Foto del producto"
               value={p.image}
               onChange={(v) => upd({ image: v })}
-              keywords={p.imageKeywords}
+              nameHint={(p.name?.es || "product").slice(0, 30)}
             />
             <TF
               label="Keywords SEO de imagen"
@@ -1545,13 +1567,13 @@ function BusinessModal({
                   label="Logo"
                   value={b.logo ?? ""}
                   onChange={(v) => upd({ logo: v })}
-                  keywords={[b.slug, "logo"]}
+                  nameHint={`${b.slug}-logo`}
                 />
                 <ImgUpload
                   label="Foto de portada"
                   value={b.image ?? ""}
                   onChange={(v) => upd({ image: v })}
-                  keywords={[b.slug, "cover"]}
+                  nameHint={`${b.slug}-cover`}
                 />
               </Sec>
               <Sec title="⚙️ Config">
@@ -1849,18 +1871,35 @@ function BusinessModal({
 }
 
 // ─── Main Admin Page ──────────────────────────────────────────────────────────
+// ─── API helpers ─────────────────────────────────────────────────────────────
+async function apiGet(file: string) {
+  const res = await fetch(`/api/data?file=${encodeURIComponent(file)}`)
+  return res.ok ? res.json() : null
+}
+async function apiSave(file: string, data: unknown) {
+  const res = await fetch('/api/data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file, data }),
+  })
+  return res.ok
+}
+async function apiDel(file: string) {
+  const res = await fetch(`/api/data?file=${encodeURIComponent(file)}`, { method: 'DELETE' })
+  return res.ok
+}
+
 export default function AdminPage() {
   const [lang, setLang] = useState<Lang>("es");
-  const [tab, setTab] = useState<"businesses" | "products" | "config">(
-    "businesses",
-  );
+  const [tab, setTab] = useState<"businesses" | "products" | "config">("businesses");
   const [businesses, setBusinesses] = useState<AdminBiz[]>([]);
   const [products, setProducts] = useState<Record<string, Product[]>>({});
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [editingBiz, setEditingBiz] = useState<AdminBiz | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [config, setConfig] = useState(() => loadConfig());
+  const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState<any>({ customPalettes: [], developer: {} });
   const fileRef = useRef<HTMLInputElement>(null);
 
   const showToast = (msg: string) => {
@@ -1868,114 +1907,101 @@ export default function AdminPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // ── Load everything from the server on mount ──
   useEffect(() => {
-    Promise.all([
-      import("@/data/businesses.json"),
-      import("@/data/business/burger-house.json"),
-      import("@/data/business/pizza-palace.json"),
-      import("@/data/products/burger-house.json"),
-      import("@/data/products/pizza-palace.json"),
-    ]).then(([bizData, bh, pp, bhP, ppP]) => {
-      const bizList = (bizData.default as any).businesses as Business[];
-      const details: Record<string, any> = {
-        "burger-house": bh.default,
-        "pizza-palace": pp.default,
-      };
-      setBusinesses(
-        bizList.map((b) => ({
-          ...b,
-          detail: details[b.slug] ?? { slug: b.slug },
-        })),
-      );
-      setProducts({
-        "burger-house": (bhP.default as any).products,
-        "pizza-palace": (ppP.default as any).products,
-      });
-    });
+    setLoading(true)
+    ;(async () => {
+      try {
+        const bizData = await apiGet('businesses')
+        if (!bizData) return
+        const bizList: Business[] = bizData.businesses
+
+        const [detailResults, prodResults, cfg] = await Promise.all([
+          Promise.allSettled(bizList.map(b => apiGet(`business/${b.slug}`).then(d => ({ slug: b.slug, d: d ?? { slug: b.slug } })))),
+          Promise.allSettled(bizList.map(b => apiGet(`products/${b.slug}`).then(d => ({ slug: b.slug, p: d?.products ?? [] })))),
+          apiGet('config'),
+        ])
+
+        const detailMap: Record<string, any> = {}
+        detailResults.forEach(r => { if (r.status === 'fulfilled') detailMap[r.value.slug] = r.value.d })
+
+        const prodMap: Record<string, Product[]> = {}
+        prodResults.forEach(r => { if (r.status === 'fulfilled') prodMap[r.value.slug] = r.value.p })
+
+        setBusinesses(bizList.map(b => ({ ...b, detail: detailMap[b.slug] ?? { slug: b.slug } })))
+        setProducts(prodMap)
+        if (cfg) setConfig(cfg)
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, []);
 
-  const saveBiz = (b: AdminBiz) => {
-    setBusinesses((prev) =>
-      prev.some((x) => x.id === b.id)
-        ? prev.map((x) => (x.id === b.id ? b : x))
-        : [...prev, b],
-    );
-    if (!products[b.slug]) setProducts((prev) => ({ ...prev, [b.slug]: [] }));
-    setEditingBiz(null);
-    showToast("✓ Negocio guardado");
+  // ── Persist businesses list helper ──
+  const persistBizList = async (list: AdminBiz[]) => {
+    await apiSave('businesses', { businesses: list.map(({ detail, ...b }) => b) })
+  }
+
+  const saveBiz = async (b: AdminBiz) => {
+    const newList = businesses.some(x => x.id === b.id)
+      ? businesses.map(x => x.id === b.id ? b : x)
+      : [...businesses, b]
+    setBusinesses(newList)
+    if (!products[b.slug]) setProducts(prev => ({ ...prev, [b.slug]: [] }))
+    setEditingBiz(null)
+    await persistBizList(newList)
+    await apiSave(`business/${b.slug}`, b.detail)
+    if (!products[b.slug]) await apiSave(`products/${b.slug}`, { products: [] })
+    showToast("✓ Negocio guardado en el servidor")
   };
 
-  const deleteBiz = (slug: string) => {
+  const deleteBiz = async (slug: string) => {
     if (!confirm("¿Eliminar negocio?")) return;
-    setBusinesses((prev) => prev.filter((b) => b.slug !== slug));
-    setProducts((prev) => {
-      const n = { ...prev };
-      delete n[slug];
-      return n;
-    });
-    if (selectedSlug === slug) setSelectedSlug(null);
-    showToast("Negocio eliminado");
+    const newList = businesses.filter(b => b.slug !== slug)
+    setBusinesses(newList)
+    setProducts(prev => { const n = { ...prev }; delete n[slug]; return n })
+    if (selectedSlug === slug) setSelectedSlug(null)
+    await persistBizList(newList)
+    await apiDel(`business/${slug}`)
+    await apiDel(`products/${slug}`)
+    showToast("Negocio eliminado")
   };
 
-  const saveProduct = (p: Product) => {
+  const saveProduct = async (p: Product) => {
     if (!selectedSlug) return;
-    setProducts((prev) => {
-      const list = prev[selectedSlug] ?? [];
-      const exists = list.some((x) => x.id === p.id);
-      return {
-        ...prev,
-        [selectedSlug]: exists
-          ? list.map((x) => (x.id === p.id ? p : x))
-          : [...list, p],
-      };
-    });
-    setEditingProduct(null);
-    showToast("✓ Producto guardado");
+    const list = products[selectedSlug] ?? []
+    const newList = list.some(x => x.id === p.id) ? list.map(x => x.id === p.id ? p : x) : [...list, p]
+    setProducts(prev => ({ ...prev, [selectedSlug]: newList }))
+    setEditingProduct(null)
+    await apiSave(`products/${selectedSlug}`, { products: newList })
+    showToast("✓ Producto guardado en el servidor")
   };
 
-  const deleteProduct = (id: number) => {
+  const deleteProduct = async (id: number) => {
     if (!selectedSlug) return;
-    setProducts((prev) => ({
-      ...prev,
-      [selectedSlug]: (prev[selectedSlug] ?? []).filter((p) => p.id !== id),
-    }));
-    showToast("Producto eliminado");
+    const newList = (products[selectedSlug] ?? []).filter(p => p.id !== id)
+    setProducts(prev => ({ ...prev, [selectedSlug]: newList }))
+    await apiSave(`products/${selectedSlug}`, { products: newList })
+    showToast("Producto eliminado")
   };
 
-  const handleExport = async () => {
-    const bizOutput = { businesses: businesses.map(({ detail, ...b }) => b) };
-    const files: Record<string, string> = {
-      "data/businesses.json": JSON.stringify(bizOutput, null, 2),
-    };
-    businesses.forEach((b) => {
-      files[`data/business/${b.slug}.json`] = JSON.stringify(b.detail, null, 2);
-    });
-    Object.entries(products).forEach(([slug, prods]) => {
-      files[`data/products/${slug}.json`] = JSON.stringify(
-        { products: prods },
-        null,
-        2,
-      );
-    });
-    try {
-      const JSZip = (await import("jszip")).default;
-      const zip = new JSZip();
-      Object.entries(files).forEach(([path, content]) =>
-        zip.file(path, content),
-      );
-      const blob = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "catalogos-data.zip";
-      a.click();
-      showToast("✓ ZIP exportado");
-    } catch {
-      showToast("⚠️ Exporta manualmente");
-    }
-  };
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    window.location.href = '/login'
+  }
 
   const selectedProducts = selectedSlug ? (products[selectedSlug] ?? []) : [];
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
+      <div className="text-center space-y-3">
+        <div className="text-5xl animate-pulse">🏪</div>
+        <p className="text-sm font-semibold" style={{ color: "var(--color-text-muted)" }}>
+          Cargando datos del servidor…
+        </p>
+      </div>
+    </div>
+  )
 
   return (
     <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
@@ -2064,11 +2090,11 @@ export default function AdminPage() {
             📥 Importar
           </button>
           <button
-            onClick={handleExport}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold active:scale-95"
-            style={{ background: "var(--color-accent)", color: "white" }}
+            onClick={handleLogout}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80 transition-all"
+            style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
           >
-            📤 ZIP
+            🚪 Salir
           </button>
         </div>
       </header>
@@ -2474,9 +2500,8 @@ export default function AdminPage() {
                 onChange={(p) => {
                   const updated = { ...config, homePalette: p };
                   setConfig(updated);
-                  saveConfig(updated);
+                  apiSave('config', updated).then(() => showToast("✓ Tema guardado"))
                   applyGlobalPalette(p);
-                  showToast("✓ Tema aplicado");
                 }}
               />
             </div>
@@ -2540,7 +2565,7 @@ export default function AdminPage() {
                         },
                       };
                       setConfig(updated);
-                      saveConfig(updated);
+                      apiSave('config', updated);
                     }}
                     placeholder={
                       field === "name"

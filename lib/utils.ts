@@ -1,7 +1,9 @@
-// ─── Pure utility functions (safe for client and server) ─────────────────────
-// No 'fs', no Node.js APIs — can be imported anywhere.
+// Pure utility functions — safe to import from client components (no fs/node deps)
+import { Business, BusinessDetail, Product, ProductIndexes, Lang } from '@/types'
 
-import { Product, ProductIndexes, Lang } from '@/types'
+export function getL(obj: { es: string; en: string }, lang: Lang): string {
+  return obj[lang] ?? obj.es
+}
 
 export function buildProductIndexes(products: Product[], lang: Lang = 'es'): ProductIndexes {
   const productsById = new Map<number, Product>()
@@ -34,8 +36,4 @@ export function parseCartParam(cartParam: string, productsById: Map<number, Prod
 
 export function encodeCartParam(items: Array<{ productId: number; quantity: number }>): string {
   return items.map(i => `${i.productId}x${i.quantity}`).join(',')
-}
-
-export function getL(obj: { es: string; en: string }, lang: Lang): string {
-  return obj[lang] ?? obj.es
 }
