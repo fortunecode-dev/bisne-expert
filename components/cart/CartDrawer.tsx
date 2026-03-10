@@ -1,10 +1,14 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import type { CartItem, Product, BusinessDetail, Lang } from '@/types';
-import { formatPrice, buildWhatsAppMessage, buildWhatsAppURL } from '@/lib/whatsapp';
-import { buildCartParam } from '@/lib/data';
-import { getCartTotal } from '@/lib/cart';
+import { useEffect } from "react";
+import type { CartItem, Product, BusinessDetail, Lang } from "@/types";
+import {
+  formatPrice,
+  buildWhatsAppMessage,
+  buildWhatsAppURL,
+} from "@/lib/whatsapp";
+// import { buildCartParam } from "@/lib/data";
+// import { getCartTotal } from "@/lib/cart";
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -18,7 +22,15 @@ interface CartDrawerProps {
   onRemove: (productId: number) => void;
   onClear: () => void;
 }
-
+const getCartTotal = (items: CartItem[], prices: Record<number, number>) => {
+  return items.reduce(
+    (acc, item) => acc + item.quantity * prices[item.productId],
+    0,
+  );
+};
+const buildCartParam = (items: CartItem[]) => {
+  return items.map((item) => `${+item.productId}x${item.quantity}`).join(",");
+};
 export default function CartDrawer({
   isOpen,
   onClose,
@@ -31,7 +43,7 @@ export default function CartDrawer({
   onRemove,
   onClear,
 }: CartDrawerProps) {
-  const currency = business.currency || 'CUP';
+  const currency = business.currency || "CUP";
 
   const prices: Record<number, number> = {};
   for (const [id, product] of Object.entries(products)) {
@@ -42,17 +54,23 @@ export default function CartDrawer({
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [isOpen]);
 
   const handleCheckout = () => {
-    const message = buildWhatsAppMessage(items, products, business, lang);
-    const url = buildWhatsAppURL(business.phone, message);
-    window.open(url, '_blank');
+    if (business.phone) {
+      const message = buildWhatsAppMessage(items, products, business, lang);
+      const url = buildWhatsAppURL(business.phone, message);
+      window.open(url, "_blank");
+    } else {
+      throw "Negocio sin teléfono";
+    }
   };
 
   const handleShare = async () => {
@@ -60,9 +78,9 @@ export default function CartDrawer({
     const url = `${window.location.origin}/view/${businessSlug}?c=${cartParam}`;
     try {
       await navigator.clipboard.writeText(url);
-      alert(lang === 'es' ? '¡Enlace copiado!' : 'Link copied!');
+      alert(lang === "es" ? "¡Enlace copiado!" : "Link copied!");
     } catch {
-      prompt(lang === 'es' ? 'Copia este enlace:' : 'Copy this link:', url);
+      prompt(lang === "es" ? "Copia este enlace:" : "Copy this link:", url);
     }
   };
 
@@ -70,16 +88,18 @@ export default function CartDrawer({
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={onClose}
       />
 
       {/* Drawer */}
-      <div className={`fixed top-0 right-0 h-full w-full max-w-sm bg-white z-50 shadow-2xl flex flex-col transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div
+        className={`fixed top-0 right-0 h-full w-full max-w-sm bg-white z-50 shadow-2xl flex flex-col transition-transform duration-300 ease-out ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
           <h2 className="text-lg font-black text-gray-900">
-            🛒 {lang === 'es' ? 'Tu Pedido' : 'Your Order'}
+            🛒 {lang === "es" ? "Tu Pedido" : "Your Order"}
           </h2>
           <button
             onClick={onClose}
@@ -95,47 +115,61 @@ export default function CartDrawer({
             <div className="flex flex-col items-center justify-center h-48 text-gray-400">
               <span className="text-5xl mb-3">🛒</span>
               <p className="text-sm font-medium">
-                {lang === 'es' ? 'Tu carrito está vacío' : 'Your cart is empty'}
+                {lang === "es" ? "Tu carrito está vacío" : "Your cart is empty"}
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {items.map(item => {
+              {items.map((item) => {
                 const product = products[item.productId];
                 if (!product) return null;
                 const name = product.name[lang];
                 const subtotal = product.price * item.quantity;
 
                 return (
-                  <div key={item.productId} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+                  <div
+                    key={item.productId}
+                    className="flex items-center gap-3 bg-gray-50 rounded-xl p-3"
+                  >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{name}</p>
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {name}
+                      </p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {formatPrice(product.price, currency)} {lang === 'es' ? 'c/u' : 'each'}
+                        {formatPrice(product.price, currency)}{" "}
+                        {lang === "es" ? "c/u" : "each"}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => onUpdateQuantity(item.productId, item.quantity - 1)}
+                        onClick={() =>
+                          onUpdateQuantity(item.productId, item.quantity - 1)
+                        }
                         className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-orange-50 hover:border-orange-300 font-bold text-sm transition-colors"
                       >
                         −
                       </button>
-                      <span className="w-6 text-center text-sm font-bold text-gray-900">{item.quantity}</span>
+                      <span className="w-6 text-center text-sm font-bold text-gray-900">
+                        {item.quantity}
+                      </span>
                       <button
-                        onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
+                        onClick={() =>
+                          onUpdateQuantity(item.productId, item.quantity + 1)
+                        }
                         className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-orange-50 hover:border-orange-300 font-bold text-sm transition-colors"
                       >
                         +
                       </button>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-gray-900">{formatPrice(subtotal, currency)}</p>
+                      <p className="text-sm font-bold text-gray-900">
+                        {formatPrice(subtotal, currency)}
+                      </p>
                       <button
                         onClick={() => onRemove(item.productId)}
                         className="text-xs text-red-400 hover:text-red-600 mt-0.5"
                       >
-                        {lang === 'es' ? 'Quitar' : 'Remove'}
+                        {lang === "es" ? "Quitar" : "Remove"}
                       </button>
                     </div>
                   </div>
@@ -150,9 +184,11 @@ export default function CartDrawer({
           <div className="p-4 border-t border-gray-100 space-y-3 bg-gray-50">
             <div className="flex items-center justify-between">
               <span className="text-base font-semibold text-gray-700">
-                {lang === 'es' ? 'Total' : 'Total'}
+                {lang === "es" ? "Total" : "Total"}
               </span>
-              <span className="text-xl font-black text-gray-900">{formatPrice(total, currency)}</span>
+              <span className="text-xl font-black text-gray-900">
+                {formatPrice(total, currency)}
+              </span>
             </div>
 
             <button
@@ -160,7 +196,7 @@ export default function CartDrawer({
               className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
             >
               <span>📲</span>
-              {lang === 'es' ? 'Pedir por WhatsApp' : 'Order via WhatsApp'}
+              {lang === "es" ? "Pedir por WhatsApp" : "Order via WhatsApp"}
             </button>
 
             <div className="flex gap-2">
@@ -168,13 +204,13 @@ export default function CartDrawer({
                 onClick={handleShare}
                 className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-gray-200 hover:border-orange-300 text-gray-700 hover:text-orange-600 font-semibold py-2.5 px-3 rounded-xl text-sm transition-all duration-200"
               >
-                🔗 {lang === 'es' ? 'Compartir' : 'Share'}
+                🔗 {lang === "es" ? "Compartir" : "Share"}
               </button>
               <button
                 onClick={onClear}
                 className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-gray-200 hover:border-red-300 text-gray-500 hover:text-red-500 font-semibold py-2.5 px-3 rounded-xl text-sm transition-all duration-200"
               >
-                🗑 {lang === 'es' ? 'Limpiar' : 'Clear'}
+                🗑 {lang === "es" ? "Limpiar" : "Clear"}
               </button>
             </div>
           </div>
