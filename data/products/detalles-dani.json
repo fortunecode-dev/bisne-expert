@@ -1,0 +1,81 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": {
+        "es": "Rosa enmarcada luminosa",
+        "en": "Rosa enmarcada luminosa"
+      },
+      "description": {
+        "es": "Una rosa muy bonita enmarcada con lucesitas",
+        "en": "Una rosa muy bonita enmarcada con lucesitas"
+      },
+      "price": 1000,
+      "image": "/resources/detalles-dani/1.jpg",
+      "imageKeywords": [],
+      "category": {
+        "es": "rosas",
+        "en": "rosas"
+      },
+      "featured": true,
+      "hidden": false,
+      "available": true,
+      "position": 1,
+      "tags": [
+        {
+          "label": {
+            "es": "Rosa",
+            "en": "Rosa"
+          },
+          "color": "red",
+          "textColor": "#ffffff"
+        }
+      ],
+      "seo": {
+        "title": {
+          "es": "",
+          "en": ""
+        },
+        "description": {
+          "es": "",
+          "en": ""
+        },
+        "keywords": []
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "es": "Ramo de flores artificiales",
+        "en": "Ramo de flores artificiales"
+      },
+      "description": {
+        "es": "Flores hechas a mano con papel que no me se el nombre todavía",
+        "en": "Flores hechas a mano con papel que no me se el nombre todavía"
+      },
+      "price": 1500,
+      "image": "/resources/detalles-dani/2.jpg",
+      "imageKeywords": [],
+      "category": {
+        "es": "ramos",
+        "en": "ramos"
+      },
+      "featured": false,
+      "hidden": false,
+      "available": false,
+      "position": 2,
+      "tags": [],
+      "seo": {
+        "title": {
+          "es": "",
+          "en": ""
+        },
+        "description": {
+          "es": "",
+          "en": ""
+        },
+        "keywords": []
+      }
+    }
+  ]
+}
