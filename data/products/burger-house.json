@@ -1,0 +1,238 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": {
+        "es": "Hamburguesa Clásica",
+        "en": "Classic Burger"
+      },
+      "description": {
+        "es": "Carne de res 200g, lechuga, tomate, cebolla y salsa especial en pan brioche",
+        "en": "200g beef patty, lettuce, tomato, onion and special sauce on brioche bun"
+      },
+      "price": 5.5,
+      "image": "",
+      "imageKeywords": [
+        "classic",
+        "burger",
+        "beef"
+      ],
+      "category": {
+        "es": "Hamburguesas",
+        "en": "Burgers"
+      },
+      "featured": true,
+      "hidden": false,
+      "available": true,
+      "position": 1,
+      "tags": [
+        {
+          "label": {
+            "es": "Bestseller",
+            "en": "Bestseller"
+          },
+          "color": "#e8500a",
+          "textColor": "#fff"
+        }
+      ],
+      "seo": {
+        "title": {
+          "es": "Hamburguesa Clásica",
+          "en": "Classic Burger"
+        },
+        "description": {
+          "es": "Hamburguesa artesanal de res",
+          "en": "Artisan beef burger"
+        },
+        "keywords": [
+          "burger"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "es": "Hamburguesa BBQ",
+        "en": "BBQ Burger"
+      },
+      "description": {
+        "es": "Carne de res 250g, bacon crujiente, queso cheddar, cebolla caramelizada y salsa BBQ",
+        "en": "250g beef, crispy bacon, cheddar cheese, caramelized onion and BBQ sauce"
+      },
+      "price": 7,
+      "image": "",
+      "imageKeywords": [
+        "bbq",
+        "burger",
+        "bacon"
+      ],
+      "category": {
+        "es": "Hamburguesas",
+        "en": "Burgers"
+      },
+      "featured": true,
+      "hidden": false,
+      "available": true,
+      "position": 2,
+      "tags": [
+        {
+          "label": {
+            "es": "Nuevo",
+            "en": "New"
+          },
+          "color": "#16a34a",
+          "textColor": "#fff"
+        }
+      ],
+      "seo": {
+        "title": {
+          "es": "Hamburguesa BBQ",
+          "en": "BBQ Burger"
+        },
+        "description": {
+          "es": "Con bacon y salsa BBQ",
+          "en": "With bacon and BBQ sauce"
+        },
+        "keywords": [
+          "bbq"
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "name": {
+        "es": "Hamburguesa Doble",
+        "en": "Double Burger"
+      },
+      "description": {
+        "es": "Doble carne de res 400g, doble queso americano, pepinillos, mostaza y ketchup",
+        "en": "Double beef 400g, double American cheese, pickles, mustard and ketchup"
+      },
+      "price": 9.5,
+      "originalPrice": 11,
+      "image": "",
+      "imageKeywords": [
+        "double",
+        "burger"
+      ],
+      "category": {
+        "es": "Hamburguesas",
+        "en": "Burgers"
+      },
+      "featured": false,
+      "hidden": false,
+      "available": true,
+      "position": 3,
+      "tags": [
+        {
+          "label": {
+            "es": "Oferta",
+            "en": "Sale"
+          },
+          "color": "#dc2626",
+          "textColor": "#fff"
+        }
+      ],
+      "seo": {
+        "title": {
+          "es": "Hamburguesa Doble",
+          "en": "Double Burger"
+        },
+        "description": {
+          "es": "Para los más hambrientos",
+          "en": "For the hungriest"
+        },
+        "keywords": [
+          "double"
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "name": {
+        "es": "Papas Fritas",
+        "en": "French Fries"
+      },
+      "description": {
+        "es": "Papas fritas crujientes con sal marina y aderezo a elección: ketchup, mayonesa o ranch",
+        "en": "Crispy fries with sea salt, choice of sauce: ketchup, mayo or ranch"
+      },
+      "price": 2.5,
+      "image": "",
+      "imageKeywords": [
+        "fries",
+        "papas"
+      ],
+      "category": {
+        "es": "Acompañantes",
+        "en": "Sides"
+      },
+      "featured": false,
+      "hidden": false,
+      "available": true,
+      "position": 4,
+      "tags": [],
+      "seo": {
+        "title": {
+          "es": "Papas Fritas",
+          "en": "French Fries"
+        },
+        "description": {
+          "es": "Papas fritas crujientes",
+          "en": "Crispy fries"
+        },
+        "keywords": [
+          "fries"
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "name": {
+        "es": "Aros de Cebolla",
+        "en": "Onion Rings"
+      },
+      "description": {
+        "es": "Aros de cebolla rebozados y fritos, crujientes por fuera y suaves por dentro, con salsa ranch",
+        "en": "Battered and fried onion rings, crispy outside and tender inside, with ranch sauce"
+      },
+      "price": 3,
+      "image": "",
+      "imageKeywords": [
+        "onion",
+        "rings"
+      ],
+      "category": {
+        "es": "Acompañantes",
+        "en": "Sides"
+      },
+      "featured": false,
+      "hidden": false,
+      "available": false,
+      "position": 5,
+      "tags": [
+        {
+          "label": {
+            "es": "Agotado",
+            "en": "Sold Out"
+          },
+          "color": "#71717a",
+          "textColor": "#fff"
+        }
+      ],
+      "seo": {
+        "title": {
+          "es": "Aros de Cebolla",
+          "en": "Onion Rings"
+        },
+        "description": {
+          "es": "Aros crujientes con ranch",
+          "en": "Crispy rings with ranch"
+        },
+        "keywords": [
+          "onion"
+        ]
+      }
+    }
+  ]
+}

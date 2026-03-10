@@ -1,0 +1,52 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": { "es": "Margherita Clásica", "en": "Classic Margherita" },
+      "description": { "es": "Tomate San Marzano, mozzarella fior di latte, albahaca fresca y aceite de oliva extra virgen.", "en": "San Marzano tomato, fior di latte mozzarella, fresh basil and extra virgin olive oil." },
+      "price": 300,
+      "image": "/images/margherita-pizza.png",
+      "imageKeywords": ["margherita", "pizza", "clasica", "napolitana"],
+      "category": { "es": "pizzas", "en": "pizzas" },
+      "featured": true,
+      "hidden": false,
+      "seo": {
+        "title": { "es": "Margherita Clásica - Pizza Primo", "en": "Classic Margherita - Pizza Primo" },
+        "description": { "es": "Pizza margherita napolitana auténtica.", "en": "Authentic Neapolitan margherita pizza." },
+        "keywords": ["margherita", "pizza", "napolitana"]
+      }
+    },
+    {
+      "id": 2,
+      "name": { "es": "Diavola", "en": "Diavola" },
+      "description": { "es": "Salsa de tomate, mozzarella, salami picante y aceitunas negras.", "en": "Tomato sauce, mozzarella, spicy salami and black olives." },
+      "price": 350,
+      "image": "/images/diavola-pizza.png",
+      "imageKeywords": ["diavola", "pizza", "picante", "salami"],
+      "category": { "es": "pizzas", "en": "pizzas" },
+      "featured": true,
+      "hidden": false,
+      "seo": {
+        "title": { "es": "Diavola - Pizza Primo", "en": "Diavola - Pizza Primo" },
+        "description": { "es": "Pizza picante con salami y aceitunas.", "en": "Spicy pizza with salami and olives." },
+        "keywords": ["diavola", "pizza", "picante"]
+      }
+    },
+    {
+      "id": 3,
+      "name": { "es": "Ensalada César", "en": "Caesar Salad" },
+      "description": { "es": "Lechuga romana, crutones de pan artesanal, parmesano y aderezo César clásico.", "en": "Romaine lettuce, artisan croutons, parmesan and classic Caesar dressing." },
+      "price": 180,
+      "image": "/images/caesar-salad.png",
+      "imageKeywords": ["cesar", "ensalada", "caesar", "salad"],
+      "category": { "es": "ensaladas", "en": "salads" },
+      "featured": false,
+      "hidden": false,
+      "seo": {
+        "title": { "es": "Ensalada César - Pizza Primo", "en": "Caesar Salad - Pizza Primo" },
+        "description": { "es": "Ensalada césar clásica con crutones artesanales.", "en": "Classic Caesar salad with artisan croutons." },
+        "keywords": ["ensalada", "cesar", "caesar"]
+      }
+    }
+  ]
+}

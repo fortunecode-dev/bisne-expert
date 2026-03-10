@@ -1,0 +1,99 @@
+{
+  "slug": "burger-house",
+  "province": "La Habana",
+  "municipality": "Vedado",
+  "address": {
+    "es": "Calle 23 #456",
+    "en": "23rd St #456"
+  },
+  "phone": "5353456789",
+  "cardNumber": "9204-1234-5678-9012",
+  "paymentMethods": [
+    "cash",
+    "transfer",
+    "card"
+  ],
+  "donationsEnabled": true,
+  "website": "https://burgerhouse.example.com",
+  "socialLinks": {
+    "instagram": "https://instagram.com/burgerhouse",
+    "facebook": "https://facebook.com/burgerhouse",
+    "telegram": "https://t.me/burgerhouse"
+  },
+  "schedule": {
+    "alwaysOpen": false,
+    "days": {
+      "monday": {
+        "closed": false,
+        "h24": false,
+        "open": "11:00",
+        "close": "22:00"
+      },
+      "tuesday": {
+        "closed": false,
+        "h24": false,
+        "open": "11:00",
+        "close": "22:00"
+      },
+      "wednesday": {
+        "closed": false,
+        "h24": false,
+        "open": "11:00",
+        "close": "22:00"
+      },
+      "thursday": {
+        "closed": false,
+        "h24": false,
+        "open": "11:00",
+        "close": "22:00"
+      },
+      "friday": {
+        "closed": false,
+        "h24": false,
+        "open": "11:00",
+        "close": "23:00"
+      },
+      "saturday": {
+        "closed": false,
+        "h24": false,
+        "open": "11:00",
+        "close": "23:00"
+      },
+      "sunday": {
+        "closed": false,
+        "h24": false,
+        "open": "12:00",
+        "close": "21:00"
+      }
+    }
+  },
+  "currency": "USD",
+  "palette": {
+    "name": "Burger Flame",
+    "accent": "#e8500a",
+    "accentText": "#ffffff",
+    "accentSoft": "#fff0e8",
+    "bg": "#0f0c0a",
+    "surface": "#1c1510",
+    "surface2": "#261e16",
+    "border": "#3a2a1e",
+    "text": "#f5ede4",
+    "textMuted": "#8a7060",
+    "priceColor": "#fbbf24"
+  },
+  "seo": {
+    "title": {
+      "es": "Burger House - Catálogo",
+      "en": "Burger House - Catalog"
+    },
+    "description": {
+      "es": "Hamburguesas artesanales",
+      "en": "Artisan burgers"
+    },
+    "keywords": [
+      "burger",
+      "hamburguesa",
+      "havana"
+    ]
+  }
+}

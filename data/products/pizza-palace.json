@@ -1,0 +1,197 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": {
+        "es": "Margherita",
+        "en": "Margherita"
+      },
+      "description": {
+        "es": "Salsa de tomate, mozzarella fresca y albahaca",
+        "en": "Tomato sauce, fresh mozzarella and basil"
+      },
+      "price": 8,
+      "image": "/images/margherita.svg",
+      "imageKeywords": [
+        "margherita",
+        "pizza",
+        "mozzarella",
+        "basil"
+      ],
+      "category": {
+        "es": "Pizzas Clásicas",
+        "en": "Classic Pizzas"
+      },
+      "featured": true,
+      "hidden": false,
+      "seo": {
+        "title": {
+          "es": "Pizza Margherita - Pizza Palace",
+          "en": "Margherita Pizza - Pizza Palace"
+        },
+        "description": {
+          "es": "La clásica pizza italiana",
+          "en": "The classic Italian pizza"
+        },
+        "keywords": [
+          "margherita",
+          "pizza"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "es": "Pepperoni",
+        "en": "Pepperoni"
+      },
+      "description": {
+        "es": "Salsa de tomate, mozzarella y abundante pepperoni",
+        "en": "Tomato sauce, mozzarella and generous pepperoni"
+      },
+      "price": 10,
+      "image": "/images/pepperoni.svg",
+      "imageKeywords": [
+        "pepperoni",
+        "pizza",
+        "cheese"
+      ],
+      "category": {
+        "es": "Pizzas Clásicas",
+        "en": "Classic Pizzas"
+      },
+      "featured": true,
+      "hidden": false,
+      "seo": {
+        "title": {
+          "es": "Pizza Pepperoni - Pizza Palace",
+          "en": "Pepperoni Pizza - Pizza Palace"
+        },
+        "description": {
+          "es": "Pizza con abundante pepperoni",
+          "en": "Pizza with generous pepperoni"
+        },
+        "keywords": [
+          "pepperoni",
+          "pizza"
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "name": {
+        "es": "Cuatro Quesos",
+        "en": "Four Cheese"
+      },
+      "description": {
+        "es": "Mozzarella, gorgonzola, parmesano y queso de cabra",
+        "en": "Mozzarella, gorgonzola, parmesan and goat cheese"
+      },
+      "price": 12,
+      "image": "/images/four-cheese.svg",
+      "imageKeywords": [
+        "four cheese",
+        "cuatro quesos",
+        "pizza"
+      ],
+      "category": {
+        "es": "Pizzas Especiales",
+        "en": "Special Pizzas"
+      },
+      "featured": false,
+      "hidden": false,
+      "seo": {
+        "title": {
+          "es": "Pizza Cuatro Quesos - Pizza Palace",
+          "en": "Four Cheese Pizza - Pizza Palace"
+        },
+        "description": {
+          "es": "Cuatro tipos de queso en una pizza",
+          "en": "Four types of cheese on one pizza"
+        },
+        "keywords": [
+          "four cheese",
+          "pizza"
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "name": {
+        "es": "Veggie Supreme",
+        "en": "Veggie Supreme"
+      },
+      "description": {
+        "es": "Pimientos, champiñones, aceitunas, cebolla y espinacas",
+        "en": "Bell peppers, mushrooms, olives, onion and spinach"
+      },
+      "price": 9.5,
+      "image": "/images/veggie.svg",
+      "imageKeywords": [
+        "veggie",
+        "vegetarian",
+        "pizza",
+        "vegetables"
+      ],
+      "category": {
+        "es": "Pizzas Especiales",
+        "en": "Special Pizzas"
+      },
+      "featured": false,
+      "hidden": false,
+      "seo": {
+        "title": {
+          "es": "Pizza Veggie Supreme - Pizza Palace",
+          "en": "Veggie Supreme Pizza - Pizza Palace"
+        },
+        "description": {
+          "es": "La mejor pizza vegetariana",
+          "en": "The best vegetarian pizza"
+        },
+        "keywords": [
+          "veggie",
+          "vegetarian",
+          "pizza"
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "name": {
+        "es": "Tiramisú",
+        "en": "Tiramisu"
+      },
+      "description": {
+        "es": "Postre italiano tradicional con mascarpone y café",
+        "en": "Traditional Italian dessert with mascarpone and coffee"
+      },
+      "price": 4,
+      "image": "/images/tiramisu.svg",
+      "imageKeywords": [
+        "tiramisu",
+        "dessert",
+        "italian"
+      ],
+      "category": {
+        "es": "Postres",
+        "en": "Desserts"
+      },
+      "featured": false,
+      "hidden": false,
+      "seo": {
+        "title": {
+          "es": "Tiramisú - Pizza Palace",
+          "en": "Tiramisu - Pizza Palace"
+        },
+        "description": {
+          "es": "Tiramisú italiano tradicional",
+          "en": "Traditional Italian tiramisu"
+        },
+        "keywords": [
+          "tiramisu",
+          "dessert"
+        ]
+      }
+    }
+  ]
+}

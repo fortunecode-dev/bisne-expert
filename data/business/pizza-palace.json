@@ -1,0 +1,97 @@
+{
+  "slug": "pizza-palace",
+  "province": "La Habana",
+  "municipality": "Miramar",
+  "address": {
+    "es": "Avenida 5ta #890",
+    "en": "5th Avenue #890"
+  },
+  "phone": "5354987654",
+  "cardNumber": "9204-9876-5432-1098",
+  "paymentMethods": [
+    "cash",
+    "transfer"
+  ],
+  "donationsEnabled": false,
+  "website": "https://pizzapalace.example.com",
+  "socialLinks": {
+    "instagram": "https://instagram.com/pizzapalace",
+    "telegram": "https://t.me/pizzapalace"
+  },
+  "schedule": {
+    "alwaysOpen": false,
+    "days": {
+      "monday": {
+        "closed": true,
+        "h24": false,
+        "open": "12:00",
+        "close": "23:00"
+      },
+      "tuesday": {
+        "closed": false,
+        "h24": false,
+        "open": "12:00",
+        "close": "23:00"
+      },
+      "wednesday": {
+        "closed": false,
+        "h24": false,
+        "open": "12:00",
+        "close": "23:00"
+      },
+      "thursday": {
+        "closed": false,
+        "h24": false,
+        "open": "12:00",
+        "close": "23:00"
+      },
+      "friday": {
+        "closed": false,
+        "h24": false,
+        "open": "12:00",
+        "close": "00:00"
+      },
+      "saturday": {
+        "closed": false,
+        "h24": true,
+        "open": "12:00",
+        "close": "00:00"
+      },
+      "sunday": {
+        "closed": false,
+        "h24": false,
+        "open": "13:00",
+        "close": "22:00"
+      }
+    }
+  },
+  "currency": "USD",
+  "palette": {
+    "name": "Pizza Rosso",
+    "accent": "#c0392b",
+    "accentText": "#ffffff",
+    "accentSoft": "#fdf0ee",
+    "bg": "#0d0a0a",
+    "surface": "#1a1212",
+    "surface2": "#231818",
+    "border": "#3a2020",
+    "text": "#f5eeee",
+    "textMuted": "#8a6868",
+    "priceColor": "#e8b86d"
+  },
+  "seo": {
+    "title": {
+      "es": "Pizza Palace - Catálogo",
+      "en": "Pizza Palace - Catalog"
+    },
+    "description": {
+      "es": "Pizzas al horno de leña",
+      "en": "Wood-fired pizzas"
+    },
+    "keywords": [
+      "pizza",
+      "italian",
+      "havana"
+    ]
+  }
+}

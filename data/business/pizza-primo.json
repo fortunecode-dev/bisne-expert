@@ -1,0 +1,32 @@
+{
+  "slug": "pizza-primo",
+  "address": {
+    "es": "Obispo #789, Habana Vieja, La Habana",
+    "en": "Obispo St #789, Old Havana, Havana"
+  },
+  "phone": "5357654321",
+  "cardNumber": "9204987654321098",
+  "paymentMethods": ["cash", "transfer"],
+  "donationsEnabled": false,
+  "website": "https://pizzaprimo.cu",
+  "socialLinks": {
+    "instagram": "pizzaprimo_cu",
+    "telegram": "pizzaprimo"
+  },
+  "schedule": {
+    "es": "Todos los días: 11:00–23:00",
+    "en": "Every day: 11:00–23:00"
+  },
+  "currency": "CUP",
+  "seo": {
+    "title": {
+      "es": "Pizza Primo - Pizzas Napolitanas en La Habana",
+      "en": "Pizza Primo - Neapolitan Pizzas in Havana"
+    },
+    "description": {
+      "es": "Las mejores pizzas napolitanas horneadas en horno de leña. Ingredientes importados de Italia.",
+      "en": "The best Neapolitan pizzas baked in a wood-fired oven. Imported Italian ingredients."
+    },
+    "keywords": ["pizza", "napolitana", "italiana", "habana vieja"]
+  }
+}
