@@ -1,11 +1,12 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Business,
   BusinessDetail,
   Product,
   ProductTag,
   BusinessPalette,
+  PromoCode,
   Lang,
   LocalizedString,
   SeoMeta,
@@ -20,6 +21,7 @@ import {
   DARK_PALETTES,
   LIGHT_PALETTES,
   HOLIDAY_PALETTES,
+  ANIMATED_PALETTES,
   applyGlobalPalette,
 } from "@/lib/palette";
 // Config and custom palettes are persisted via /api/data on the server
@@ -43,9 +45,12 @@ function emptyBusiness(id: number): AdminBiz {
     slug: "",
     name: { es: "", en: "" },
     description: { es: "", en: "" },
+    slogan: { es: "", en: "" },
     logo: "",
     image: "",
     hidden: false,
+    premium: false,
+    unavailable: false,
     seo: emptySeo(),
     detail: {
       slug: "",
@@ -73,6 +78,7 @@ function emptyProduct(id: number): Product {
     description: emptyLocale(),
     price: 0,
     image: "",
+    images: [],
     imageKeywords: [],
     category: emptyLocale(),
     featured: false,
@@ -720,11 +726,11 @@ function PaletteEditor({
   ];
 
   const groups = [
-    { label: "🌑 Oscuras (10)", items: DARK_PALETTES },
-    { label: "☀️ Claras (10)", items: LIGHT_PALETTES },
-    { label: "🎉 Festividades", items: HOLIDAY_PALETTES },
+    { label: "🎨 Estándar (Común / Patrocinado / Premium)", tier: 'standard' as const, items: DARK_PALETTES.concat(LIGHT_PALETTES) },
+    { label: "🎉 Festivos (Patrocinado / Premium)", tier: 'sponsored' as const, items: HOLIDAY_PALETTES },
+    { label: "✨ Animados (solo Premium)", tier: 'premium' as const, items: ANIMATED_PALETTES },
     ...(savedCustom.length > 0
-      ? [{ label: "⭐ Mis paletas", items: savedCustom }]
+      ? [{ label: "⭐ Mis paletas", tier: 'standard' as const, items: savedCustom }]
       : []),
   ];
 
@@ -766,35 +772,30 @@ function PaletteEditor({
                 {group.items.map((preset) => {
                   const p = preset.palette;
                   const isActive = palette.name === (preset.name || p.name);
+                  const isAnimated = (p as any).animated;
                   return (
                     <button
                       key={preset.name}
                       onClick={() => onChange({ ...p, name: preset.name })}
-                      className="rounded-xl p-2.5 border text-left transition-all hover:scale-105 active:scale-95"
+                      className="rounded-xl p-2.5 border text-left transition-all hover:scale-105 active:scale-95 relative overflow-hidden"
                       style={{
                         background: p.bg,
-                        borderColor: isActive ? p.accent : p.border,
-                        boxShadow: isActive ? `0 0 0 2px ${p.accent}` : "none",
+                        borderColor: isActive ? p.accent : isAnimated ? p.accent + '80' : p.border,
+                        boxShadow: isActive ? `0 0 0 2px ${p.accent}` : isAnimated ? `0 0 12px ${p.accent}40` : "none",
                       }}
                     >
+                      {isAnimated && (
+                        <div className="absolute top-1.5 right-1.5 text-[9px] font-black px-1 py-0.5 rounded-full"
+                          style={{ background: '#a855f7', color: '#fff' }}>
+                          ✨
+                        </div>
+                      )}
                       <div className="flex gap-1 mb-1.5">
-                        <div
-                          className="w-5 h-5 rounded-full"
-                          style={{ background: p.accent }}
-                        />
-                        <div
-                          className="w-5 h-5 rounded-full"
-                          style={{ background: p.surface }}
-                        />
-                        <div
-                          className="w-5 h-5 rounded-full"
-                          style={{ background: p.priceColor }}
-                        />
+                        <div className="w-5 h-5 rounded-full" style={{ background: p.accent }} />
+                        <div className="w-5 h-5 rounded-full" style={{ background: p.surface }} />
+                        <div className="w-5 h-5 rounded-full" style={{ background: p.priceColor }} />
                       </div>
-                      <p
-                        className="text-xs font-semibold leading-tight"
-                        style={{ color: p.text, fontSize: 10 }}
-                      >
+                      <p className="text-xs font-semibold leading-tight pr-4" style={{ color: p.text, fontSize: 10 }}>
                         {preset.name}
                       </p>
                     </button>
@@ -1008,868 +1009,6 @@ function PaletteEditor({
   );
 }
 
-// ─── Draggable Product List ───────────────────────────────────────────────────
-function DraggableProducts({
-  products,
-  lang,
-  onEdit,
-  onHide,
-  onDelete,
-  onReorder,
-}: {
-  products: Product[];
-  lang: Lang;
-  onEdit: (p: Product) => void;
-  onHide: (id: number) => void;
-  onDelete: (id: number) => void;
-  onReorder: (p: Product[]) => void;
-}) {
-  const [draggingId, setDraggingId] = useState<number | null>(null);
-  const [overIdx, setOverIdx] = useState<number | null>(null);
-  const sorted = [...products].sort(
-    (a, b) => (a.position ?? 99) - (b.position ?? 99),
-  );
-
-  return (
-    <div className="space-y-2">
-      {sorted.map((p, idx) => (
-        <div
-          key={p.id}
-          draggable
-          onDragStart={() => setDraggingId(p.id)}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setOverIdx(idx);
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            if (draggingId === null) return;
-            const from = sorted.findIndex((x) => x.id === draggingId);
-            if (from === idx) {
-              setDraggingId(null);
-              setOverIdx(null);
-              return;
-            }
-            const r = [...sorted];
-            const [m] = r.splice(from, 1);
-            r.splice(idx, 0, m);
-            onReorder(r.map((x, i) => ({ ...x, position: i + 1 })));
-            setDraggingId(null);
-            setOverIdx(null);
-          }}
-          onDragEnd={() => {
-            setDraggingId(null);
-            setOverIdx(null);
-          }}
-          className="flex items-center gap-3 p-3 rounded-2xl border transition-all"
-          style={{
-            borderColor:
-              overIdx === idx ? "var(--color-accent)" : "var(--color-border)",
-            background:
-              draggingId === p.id
-                ? "var(--color-surface-2)"
-                : "var(--color-surface)",
-            opacity: draggingId === p.id ? 0.5 : 1,
-            cursor: "grab",
-          }}
-        >
-          <div
-            className="text-base select-none flex-shrink-0"
-            style={{ color: "var(--color-border)", letterSpacing: -2 }}
-          >
-            ⠿⠿
-          </div>
-          <div
-            className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 border"
-            style={{
-              borderColor: "var(--color-border)",
-              background: "var(--color-surface-2)",
-            }}
-          >
-            {p.image ? (
-              <img
-                src={p.image}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center opacity-30">
-                🍽️
-              </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p
-              className="font-semibold text-sm truncate"
-              style={{
-                fontFamily: "var(--font-display)",
-                color: p.hidden
-                  ? "var(--color-text-muted)"
-                  : "var(--color-text)",
-              }}
-            >
-              {getL(p.name, lang)}
-              {p.featured && (
-                <span
-                  className="ml-1 text-xs"
-                  style={{ color: "var(--color-accent)" }}
-                >
-                  ★
-                </span>
-              )}
-              {p.hidden && (
-                <span className="ml-1 text-xs text-zinc-500">(oculto)</span>
-              )}
-              {p.available === false && (
-                <span className="ml-1 text-xs text-zinc-500">(agotado)</span>
-              )}
-            </p>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <span
-                className="text-xs font-bold"
-                style={{ color: "var(--color-accent)" }}
-              >
-                ${p.price.toFixed(2)}
-              </span>
-              <span
-                className="text-xs"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                {getL(p.category, lang)}
-              </span>
-              {(p.tags ?? []).map((t, i) => (
-                <span
-                  key={i}
-                  className="text-xs px-1.5 py-0.5 rounded-full"
-                  style={{ background: t.color, color: t.textColor ?? "#fff" }}
-                >
-                  {getL(t.label, lang)}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="flex gap-1.5 flex-shrink-0">
-            <button
-              onClick={() => onEdit(p)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-sm border"
-              style={{
-                borderColor: "var(--color-border)",
-                color: "var(--color-text-muted)",
-              }}
-            >
-              ✏️
-            </button>
-            <button
-              onClick={() => onHide(p.id)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-sm border"
-              style={{
-                borderColor: "var(--color-border)",
-                color: "var(--color-text-muted)",
-              }}
-            >
-              {p.hidden ? "👁️" : "🙈"}
-            </button>
-            <button
-              onClick={() => {
-                if (confirm("¿Eliminar?")) onDelete(p.id);
-              }}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-sm border"
-              style={{ borderColor: "#dc262640", color: "#f87171" }}
-            >
-              🗑️
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Product Modal ────────────────────────────────────────────────────────────
-function ProductModal({
-  product,
-  onSave,
-  onClose,
-}: {
-  product: Product;
-  onSave: (p: Product) => void;
-  onClose: () => void;
-}) {
-  const [p, setP] = useState<Product>({
-    ...product,
-    tags: [...(product.tags ?? [])],
-  });
-  const upd = (x: Partial<Product>) => setP((prev) => ({ ...prev, ...x }));
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in"
-        onClick={onClose}
-      />
-      <div
-        className="relative w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl animate-slide-up flex flex-col overflow-hidden"
-        style={{
-          background: "var(--color-surface)",
-          maxHeight: "95vh",
-          border: "1px solid var(--color-border)",
-        }}
-      >
-        <div
-          className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          <h2
-            className="font-bold text-lg"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            {product.name.es || "Nuevo Producto"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            ✕
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          <Sec title="📷 Imagen">
-            <ImgUpload
-              label="Foto del producto"
-              value={p.image}
-              onChange={(v) => upd({ image: v })}
-              nameHint={(p.name?.es || "product").slice(0, 30)}
-            />
-            <TF
-              label="Keywords SEO de imagen"
-              value={p.imageKeywords.join(", ")}
-              onChange={(v) =>
-                upd({
-                  imageKeywords: v
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter(Boolean),
-                })
-              }
-              placeholder="burger, artisan"
-            />
-          </Sec>
-          <Sec title="📝 Información">
-            <LF
-              label="Nombre"
-              value={p.name}
-              onChange={(v) => upd({ name: v })}
-              required
-            />
-            <LF
-              label="Descripción"
-              value={p.description}
-              onChange={(v) => upd({ description: v })}
-              multiline
-            />
-            <LF
-              label="Categoría"
-              value={p.category}
-              onChange={(v) => upd({ category: v })}
-            />
-          </Sec>
-          <Sec title="💰 Precio y disponibilidad">
-            <div className="grid grid-cols-2 gap-3">
-              <TF
-                label="Precio"
-                value={String(p.price)}
-                type="number"
-                onChange={(v) => upd({ price: parseFloat(v) || 0 })}
-                placeholder="0.00"
-              />
-              <TF
-                label="Precio original (tachado)"
-                value={String(p.originalPrice ?? "")}
-                type="number"
-                onChange={(v) =>
-                  upd({ originalPrice: v ? parseFloat(v) : undefined })
-                }
-                placeholder="0.00"
-              />
-            </div>
-            <div className="flex gap-4 flex-wrap">
-              <Chk
-                label="★ Destacado"
-                value={p.featured}
-                onChange={(v) => upd({ featured: v })}
-              />
-              <Chk
-                label="Agotado"
-                value={p.available === false}
-                onChange={(v) => upd({ available: !v })}
-              />
-              <Chk
-                label="Ocultar"
-                value={p.hidden}
-                onChange={(v) => upd({ hidden: v })}
-              />
-            </div>
-            <TF
-              label="Posición"
-              value={String(p.position ?? "")}
-              type="number"
-              onChange={(v) => upd({ position: parseInt(v) || undefined })}
-              placeholder="1"
-            />
-          </Sec>
-          <Sec title="🏷️ Etiquetas">
-            <TagsEditor
-              tags={p.tags ?? []}
-              onChange={(v) => upd({ tags: v })}
-            />
-          </Sec>
-          <Sec title="🔍 SEO">
-            <LF
-              label="Título SEO"
-              value={p.seo.title}
-              onChange={(v) => upd({ seo: { ...p.seo, title: v } })}
-            />
-            <LF
-              label="Descripción SEO"
-              value={p.seo.description}
-              onChange={(v) => upd({ seo: { ...p.seo, description: v } })}
-              multiline
-            />
-            <TF
-              label="Keywords"
-              value={p.seo.keywords.join(", ")}
-              onChange={(v) =>
-                upd({
-                  seo: {
-                    ...p.seo,
-                    keywords: v
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                  },
-                })
-              }
-            />
-          </Sec>
-        </div>
-        <div
-          className="flex gap-3 px-5 py-4 border-t flex-shrink-0"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          <button
-            onClick={() => onSave(p)}
-            className="flex-1 py-2.5 rounded-xl text-sm font-bold active:scale-95"
-            style={{ background: "var(--color-accent)", color: "white" }}
-          >
-            ✓ Guardar producto
-          </button>
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl text-sm border"
-            style={{
-              borderColor: "var(--color-border)",
-              color: "var(--color-text-muted)",
-            }}
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Business Modal ───────────────────────────────────────────────────────────
-function BusinessModal({
-  biz,
-  onSave,
-  onClose,
-}: {
-  biz: AdminBiz;
-  onSave: (b: AdminBiz) => void;
-  onClose: () => void;
-}) {
-  const [b, setB] = useState<AdminBiz>({
-    ...biz,
-    detail: {
-      ...biz.detail,
-      schedule: biz.detail.schedule ?? makeDefaultSchedule(),
-      palette: biz.detail.palette ?? { ...DEFAULT_PALETTE },
-    },
-  });
-  const [section, setSection] = useState<
-    "info" | "contact" | "schedule" | "palette" | "seo"
-  >("info");
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const upd = (x: Partial<Business>) => setB((prev) => ({ ...prev, ...x }));
-  const updD = (x: Partial<BusinessDetail>) =>
-    setB((prev) => ({ ...prev, detail: { ...prev.detail, ...x } }));
-
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!b.slug.trim()) e.slug = "El slug es obligatorio";
-    if (!b.name.es.trim()) e.name = "El nombre en español es obligatorio";
-    if (!/^[a-z0-9-]+$/.test(b.slug))
-      e.slugFormat = "Solo letras minúsculas, números y guiones";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const handleSave = () => {
-    if (validate()) onSave(b);
-  };
-
-  const PAYMENT_OPTIONS = ["cash", "transfer", "card", "crypto", "paypal"];
-  const tabs = [
-    { id: "info", label: "📝 Info" },
-    { id: "contact", label: "📞 Contacto" },
-    { id: "schedule", label: "🕐 Horario" },
-    { id: "palette", label: "🎨 Paleta" },
-    { id: "seo", label: "🔍 SEO" },
-  ] as const;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in"
-        onClick={onClose}
-      />
-      <div
-        className="relative w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl animate-slide-up flex flex-col overflow-hidden"
-        style={{
-          background: "var(--color-surface)",
-          maxHeight: "95vh",
-          border: "1px solid var(--color-border)",
-        }}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          <h2
-            className="font-bold text-lg truncate"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            {b.name.es || "Nuevo negocio"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div
-          className="flex border-b flex-shrink-0 overflow-x-auto"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setSection(t.id)}
-              className="flex-shrink-0 py-3 text-xs font-semibold transition-all px-3 whitespace-nowrap"
-              style={{
-                color:
-                  section === t.id
-                    ? "var(--color-accent)"
-                    : "var(--color-text-muted)",
-                borderBottom:
-                  section === t.id
-                    ? "2px solid var(--color-accent)"
-                    : "2px solid transparent",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          {/* ── INFO ── */}
-          {section === "info" && (
-            <>
-              {(errors.slug || errors.name || errors.slugFormat) && (
-                <div
-                  className="p-3 rounded-xl text-xs"
-                  style={{
-                    background: "#dc262620",
-                    color: "#f87171",
-                    border: "1px solid #dc262640",
-                  }}
-                >
-                  {errors.name && <p>• {errors.name}</p>}
-                  {errors.slug && <p>• {errors.slug}</p>}
-                  {errors.slugFormat && <p>• {errors.slugFormat}</p>}
-                </div>
-              )}
-              <Sec title="🏪 Identidad">
-                <LF
-                  label="Nombre del negocio"
-                  value={b.name}
-                  onChange={(v) => {
-                    upd({ name: v });
-                    if (errors.name) setErrors((e) => ({ ...e, name: "" }));
-                  }}
-                  required
-                />
-                <LF
-                  label="Descripción"
-                  value={b.description ?? emptyLocale()}
-                  onChange={(v) => upd({ description: v })}
-                  multiline
-                />
-                <div className="space-y-1.5">
-                  <label
-                    className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1"
-                    style={{ color: "var(--color-text-muted)" }}
-                  >
-                    Slug (URL) <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    value={b.slug}
-                    onChange={(e) => {
-                      const s = e.target.value
-                        .toLowerCase()
-                        .replace(/[^a-z0-9-]/g, "-");
-                      upd({ slug: s });
-                      updD({ slug: s });
-                      if (errors.slug)
-                        setErrors((e) => ({ ...e, slug: "", slugFormat: "" }));
-                    }}
-                    placeholder="mi-restaurante"
-                    className={inputCls}
-                    style={{
-                      ...inputStyle,
-                      borderColor:
-                        errors.slug || errors.slugFormat
-                          ? "#dc2626"
-                          : "var(--color-border)",
-                    }}
-                  />
-                  <p
-                    className="text-xs"
-                    style={{ color: "var(--color-text-muted)" }}
-                  >
-                    Solo letras, números y guiones. Ej:{" "}
-                    <code>burger-house</code>
-                  </p>
-                </div>
-              </Sec>
-              <Sec title="🖼️ Imágenes">
-                <ImgUpload
-                  label="Logo"
-                  value={b.logo ?? ""}
-                  onChange={(v) => upd({ logo: v })}
-                  nameHint={`${b.slug}-logo`}
-                />
-                <ImgUpload
-                  label="Foto de portada"
-                  value={b.image ?? ""}
-                  onChange={(v) => upd({ image: v })}
-                  nameHint={`${b.slug}-cover`}
-                />
-              </Sec>
-              <Sec title="⚙️ Config">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label
-                      className="text-xs font-semibold uppercase tracking-wide block mb-1.5"
-                      style={{ color: "var(--color-text-muted)" }}
-                    >
-                      Moneda
-                    </label>
-                    <select
-                      value={b.detail.currency ?? "USD"}
-                      onChange={(e) => updD({ currency: e.target.value })}
-                      className={inputCls}
-                      style={inputStyle}
-                    >
-                      {["USD", "CUP", "EUR", "MXN", "COP", "ARS", "BRL"].map(
-                        (c) => (
-                          <option key={c}>{c}</option>
-                        ),
-                      )}
-                    </select>
-                  </div>
-                </div>
-                <Chk
-                  label="Ocultar negocio"
-                  value={b.hidden ?? false}
-                  onChange={(v) => upd({ hidden: v })}
-                />
-                <Chk
-                  label="⭐ Patrocinado (aparece primero)"
-                  value={b.sponsored ?? false}
-                  onChange={(v) => upd({ sponsored: v })}
-                />
-                <div className="space-y-1.5">
-                  <label
-                    className="text-xs font-semibold uppercase tracking-wide block"
-                    style={{ color: "var(--color-text-muted)" }}
-                  >
-                    Categorías (para filtros)
-                  </label>
-                  <input
-                    value={(b.categories ?? []).join(", ")}
-                    onChange={(e) =>
-                      upd({
-                        categories: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                    placeholder="Comida, Hamburguesas, Fast Food"
-                    className={inputCls}
-                    style={inputStyle}
-                  />
-                  <p
-                    className="text-xs"
-                    style={{ color: "var(--color-text-muted)" }}
-                  >
-                    Separa con comas. Aparecen como filtros en la página
-                    principal.
-                  </p>
-                </div>
-              </Sec>
-            </>
-          )}
-
-          {/* ── CONTACT ── */}
-          {section === "contact" && (
-            <>
-              <Sec title="📍 Ubicación">
-                <div className="grid grid-cols-2 gap-3">
-                  <TF
-                    label="Provincia"
-                    value={b.detail.province ?? ""}
-                    onChange={(v) => updD({ province: v })}
-                    placeholder="La Habana"
-                  />
-                  <TF
-                    label="Municipio"
-                    value={b.detail.municipality ?? ""}
-                    onChange={(v) => updD({ municipality: v })}
-                    placeholder="Vedado"
-                  />
-                </div>
-                <LF
-                  label="Dirección (calle / número)"
-                  value={b.detail.address ?? emptyLocale()}
-                  onChange={(v) => updD({ address: v })}
-                />
-              </Sec>
-              <Sec title="📞 Contacto">
-                <TF
-                  label="Teléfono (para WhatsApp)"
-                  value={b.detail.phone ?? ""}
-                  onChange={(v) => updD({ phone: v })}
-                  placeholder="5312345678"
-                />
-                <TF
-                  label="Sitio web"
-                  value={b.detail.website ?? ""}
-                  onChange={(v) => updD({ website: v })}
-                  placeholder="https://..."
-                />
-              </Sec>
-              <Sec title="💳 Pagos">
-                <TF
-                  label="Número de tarjeta"
-                  value={b.detail.cardNumber ?? ""}
-                  onChange={(v) => updD({ cardNumber: v })}
-                  placeholder="9204-XXXX-XXXX-XXXX"
-                />
-                <div>
-                  <label
-                    className="text-xs font-semibold uppercase tracking-wide block mb-2"
-                    style={{ color: "var(--color-text-muted)" }}
-                  >
-                    Métodos de pago
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {PAYMENT_OPTIONS.map((opt) => {
-                      const active = (b.detail.paymentMethods ?? []).includes(
-                        opt,
-                      );
-                      return (
-                        <button
-                          key={opt}
-                          onClick={() =>
-                            updD({
-                              paymentMethods: active
-                                ? (b.detail.paymentMethods ?? []).filter(
-                                    (p) => p !== opt,
-                                  )
-                                : [...(b.detail.paymentMethods ?? []), opt],
-                            })
-                          }
-                          className="px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
-                          style={
-                            active
-                              ? {
-                                  background: "var(--color-accent)",
-                                  color: "white",
-                                  borderColor: "var(--color-accent)",
-                                }
-                              : {
-                                  borderColor: "var(--color-border)",
-                                  color: "var(--color-text-muted)",
-                                }
-                          }
-                        >
-                          {opt}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <Chk
-                  label="💛 Habilitar donaciones/propinas"
-                  value={b.detail.donationsEnabled ?? false}
-                  onChange={(v) => updD({ donationsEnabled: v })}
-                />
-              </Sec>
-              <Sec title="🔗 Redes sociales">
-                {(
-                  [
-                    "instagram",
-                    "facebook",
-                    "telegram",
-                    "twitter",
-                    "whatsapp",
-                    "tiktok",
-                  ] as const
-                ).map((net) => (
-                  <TF
-                    key={net}
-                    label={net.charAt(0).toUpperCase() + net.slice(1)}
-                    value={b.detail.socialLinks?.[net] ?? ""}
-                    onChange={(v) =>
-                      updD({
-                        socialLinks: { ...b.detail.socialLinks, [net]: v },
-                      })
-                    }
-                    placeholder={`https://${net}.com/...`}
-                  />
-                ))}
-              </Sec>
-            </>
-          )}
-
-          {/* ── SCHEDULE ── */}
-          {section === "schedule" && (
-            <Sec title="🕐 Horario de atención">
-              <ScheduleEditor
-                schedule={b.detail.schedule ?? makeDefaultSchedule()}
-                onChange={(s) => updD({ schedule: s })}
-              />
-            </Sec>
-          )}
-
-          {/* ── PALETTE ── */}
-          {section === "palette" && (
-            <Sec title="🎨 Paleta de colores del catálogo">
-              <PaletteEditor
-                palette={b.detail.palette ?? DEFAULT_PALETTE}
-                onChange={(p) => updD({ palette: p })}
-              />
-            </Sec>
-          )}
-
-          {/* ── SEO ── */}
-          {section === "seo" && (
-            <>
-              <Sec title="🔍 SEO del negocio">
-                <LF
-                  label="Título SEO"
-                  value={b.seo?.title ?? emptyLocale()}
-                  onChange={(v) =>
-                    upd({ seo: { ...(b.seo ?? emptySeo()), title: v } })
-                  }
-                />
-                <LF
-                  label="Descripción SEO"
-                  value={b.seo?.description ?? emptyLocale()}
-                  onChange={(v) =>
-                    upd({ seo: { ...(b.seo ?? emptySeo()), description: v } })
-                  }
-                  multiline
-                />
-                <TF
-                  label="Keywords"
-                  value={(b.seo?.keywords ?? []).join(", ")}
-                  onChange={(v) =>
-                    upd({
-                      seo: {
-                        ...(b.seo ?? emptySeo()),
-                        keywords: v
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      },
-                    })
-                  }
-                />
-              </Sec>
-              <Sec title="🔍 SEO del catálogo">
-                <LF
-                  label="Título del catálogo"
-                  value={b.detail.seo?.title ?? emptyLocale()}
-                  onChange={(v) =>
-                    updD({ seo: { ...(b.detail.seo ?? emptySeo()), title: v } })
-                  }
-                />
-                <LF
-                  label="Descripción"
-                  value={b.detail.seo?.description ?? emptyLocale()}
-                  onChange={(v) =>
-                    updD({
-                      seo: { ...(b.detail.seo ?? emptySeo()), description: v },
-                    })
-                  }
-                  multiline
-                />
-              </Sec>
-            </>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div
-          className="flex gap-3 px-5 py-4 border-t flex-shrink-0"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          <button
-            onClick={handleSave}
-            className="flex-1 py-2.5 rounded-xl text-sm font-bold active:scale-95"
-            style={{ background: "var(--color-accent)", color: "white" }}
-          >
-            ✓ Guardar negocio
-          </button>
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl text-sm border"
-            style={{
-              borderColor: "var(--color-border)",
-              color: "var(--color-text-muted)",
-            }}
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Admin Page ──────────────────────────────────────────────────────────
 // ─── API helpers ─────────────────────────────────────────────────────────────
 async function apiGet(file: string) {
@@ -1891,12 +1030,10 @@ async function apiDel(file: string) {
 
 export default function AdminPage() {
   const [lang, setLang] = useState<Lang>("es");
-  const [tab, setTab] = useState<"businesses" | "products" | "config">("businesses");
+  const [tab, setTab] = useState<"businesses" | "config" | "reports">("businesses");
   const [businesses, setBusinesses] = useState<AdminBiz[]>([]);
   const [products, setProducts] = useState<Record<string, Product[]>>({});
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
-  const [editingBiz, setEditingBiz] = useState<AdminBiz | null>(null);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
   const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<any>({ customPalettes: [], developer: {} });
@@ -1948,7 +1085,6 @@ export default function AdminPage() {
       : [...businesses, b]
     setBusinesses(newList)
     if (!products[b.slug]) setProducts(prev => ({ ...prev, [b.slug]: [] }))
-    setEditingBiz(null)
     await persistBizList(newList)
     await apiSave(`business/${b.slug}`, b.detail)
     if (!products[b.slug]) await apiSave(`products/${b.slug}`, { products: [] })
@@ -1960,29 +1096,10 @@ export default function AdminPage() {
     const newList = businesses.filter(b => b.slug !== slug)
     setBusinesses(newList)
     setProducts(prev => { const n = { ...prev }; delete n[slug]; return n })
-    if (selectedSlug === slug) setSelectedSlug(null)
     await persistBizList(newList)
     await apiDel(`business/${slug}`)
     await apiDel(`products/${slug}`)
     showToast("Negocio eliminado")
-  };
-
-  const saveProduct = async (p: Product) => {
-    if (!selectedSlug) return;
-    const list = products[selectedSlug] ?? []
-    const newList = list.some(x => x.id === p.id) ? list.map(x => x.id === p.id ? p : x) : [...list, p]
-    setProducts(prev => ({ ...prev, [selectedSlug]: newList }))
-    setEditingProduct(null)
-    await apiSave(`products/${selectedSlug}`, { products: newList })
-    showToast("✓ Producto guardado en el servidor")
-  };
-
-  const deleteProduct = async (id: number) => {
-    if (!selectedSlug) return;
-    const newList = (products[selectedSlug] ?? []).filter(p => p.id !== id)
-    setProducts(prev => ({ ...prev, [selectedSlug]: newList }))
-    await apiSave(`products/${selectedSlug}`, { products: newList })
-    showToast("Producto eliminado")
   };
 
   const handleLogout = async () => {
@@ -2008,7 +1125,6 @@ export default function AdminPage() {
     }
   }
 
-  const selectedProducts = selectedSlug ? (products[selectedSlug] ?? []) : [];
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
@@ -2128,7 +1244,7 @@ export default function AdminPage() {
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
-          {(["businesses", "products", "config"] as const).map((t) => (
+          {(["businesses", "config", "reports"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -2145,9 +1261,7 @@ export default function AdminPage() {
             >
               {t === "businesses"
                 ? "🏪 Negocios"
-                : t === "products"
-                  ? "📦 Productos"
-                  : "⚙️ Config"}
+                : t === "reports" ? "🚩 Reportes" : "⚙️ Config"}
             </button>
           ))}
         </div>
@@ -2162,18 +1276,42 @@ export default function AdminPage() {
               >
                 Negocios
               </h2>
-              <button
-                onClick={() =>
-                  setEditingBiz(emptyBusiness(businesses.length + 1))
-                }
+              <Link
+                href="/registrar"
                 className="px-4 py-2 rounded-xl text-sm font-bold active:scale-95"
                 style={{ background: "var(--color-accent)", color: "white" }}
               >
                 + Nuevo negocio
-              </button>
+              </Link>
             </div>
+            {/* ── Stale hidden alert ── */}
+            {businesses.some(b => {
+              if (!b.hidden || !b.created_at) return false
+              const age = Date.now() - new Date((b as any).created_at).getTime()
+              return age > 14 * 24 * 60 * 60 * 1000
+            }) && (
+              <div className="mb-4 p-3 rounded-2xl border flex items-start gap-3"
+                style={{ background: '#ef444415', borderColor: '#ef444440' }}>
+                <span className="text-lg flex-shrink-0">⚠️</span>
+                <div>
+                  <p className="text-sm font-bold" style={{ color: '#f87171' }}>
+                    Negocios ocultos pendientes de revisión
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: '#fca5a5' }}>
+                    Algunos negocios llevan más de 2 semanas ocultos. Revísalos y apruébalos o elimínalos.
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="space-y-3">
-              {businesses.map((b) => {
+              {[...businesses].sort((a, b) => {
+              // Stale hidden (>14 days) come first
+              const isStale = (x: any) => x.hidden && x.created_at && Date.now() - new Date(x.created_at).getTime() > 14 * 24 * 60 * 60 * 1000
+              if (isStale(a) && !isStale(b)) return -1
+              if (!isStale(a) && isStale(b)) return 1
+              return 0
+            }).map((b) => {
+              const isStale = b.hidden && (b as any).created_at && Date.now() - new Date((b as any).created_at).getTime() > 14 * 24 * 60 * 60 * 1000
                 const palette = b.detail.palette ?? DEFAULT_PALETTE;
                 const isOpen = isOpenNow(b.detail.schedule);
                 const location = [b.detail.municipality, b.detail.province]
@@ -2184,8 +1322,9 @@ export default function AdminPage() {
                     key={b.slug}
                     className="rounded-2xl border overflow-hidden transition-all hover:border-white/15"
                     style={{
-                      background: "var(--color-surface)",
-                      borderColor: "var(--color-border)",
+                      background: isStale ? "#1a0a0a" : "var(--color-surface)",
+                      borderColor: isStale ? "#ef4444" : "var(--color-border)",
+                      boxShadow: isStale ? "0 0 0 1px #ef444440" : "none",
                     }}
                   >
                     {/* Mini cover preview */}
@@ -2291,20 +1430,21 @@ export default function AdminPage() {
                             )}
                           </p>
                           {b.hidden && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">
-                              oculto
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">oculto</span>
+                          )}
+                          {b.unavailable && (
+                            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#f9731620", color: "#f97316", border: "1px solid #f9731640" }}>
+                              🚫 no disponible
                             </span>
                           )}
                           {b.sponsored && (
-                            <span
-                              className="text-xs px-2 py-0.5 rounded-full"
-                              style={{
-                                background: "#eab30820",
-                                color: "#eab308",
-                                border: "1px solid #eab30840",
-                              }}
-                            >
+                            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#eab30820", color: "#eab308", border: "1px solid #eab30840" }}>
                               ⭐ patrocinado
+                            </span>
+                          )}
+                          {b.premium && (
+                            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#a855f720", color: "#a855f7", border: "1px solid #a855f740" }}>
+                              💎 premium
                             </span>
                           )}
                         </div>
@@ -2316,11 +1456,8 @@ export default function AdminPage() {
                         </p>
                       </div>
                       <div className="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
-                        <button
-                          onClick={() => {
-                            setSelectedSlug(b.slug);
-                            setTab("products");
-                          }}
+                        <Link
+                          href={`/editar/${b.slug}`}
                           className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
                           style={{
                             borderColor: "var(--color-border)",
@@ -2328,34 +1465,51 @@ export default function AdminPage() {
                           }}
                         >
                           📦 {(products[b.slug] ?? []).length}
-                        </button>
+                        </Link>
                         <button
-                          onClick={() =>
-                            setBusinesses((prev) =>
-                              prev.map((x) =>
-                                x.slug === b.slug
-                                  ? { ...x, sponsored: !x.sponsored }
-                                  : x,
-                              ),
-                            )
-                          }
+                          onClick={() => {
+                            const newList = businesses.map(x => x.slug === b.slug ? { ...x, sponsored: !x.sponsored } : x)
+                            setBusinesses(newList)
+                            persistBizList(newList)
+                          }}
                           className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
                           style={{
-                            borderColor: b.sponsored
-                              ? "#eab308"
-                              : "var(--color-border)",
-                            color: b.sponsored
-                              ? "#eab308"
-                              : "var(--color-text-muted)",
-                            background: b.sponsored
-                              ? "#eab30820"
-                              : "transparent",
-                          }}
-                        >
-                          {b.sponsored ? "⭐ Patrocinado" : "☆ Patrocinar"}
+                            borderColor: b.sponsored ? "#eab308" : "var(--color-border)",
+                            color: b.sponsored ? "#eab308" : "var(--color-text-muted)",
+                            background: b.sponsored ? "#eab30820" : "transparent",
+                          }}>
+                          {b.sponsored ? "⭐" : "☆"}
                         </button>
                         <button
-                          onClick={() => setEditingBiz(b)}
+                          onClick={() => {
+                            const newList = businesses.map(x => x.slug === b.slug ? { ...x, premium: !x.premium } : x)
+                            setBusinesses(newList)
+                            persistBizList(newList)
+                          }}
+                          className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
+                          style={{
+                            borderColor: b.premium ? "#a855f7" : "var(--color-border)",
+                            color: b.premium ? "#a855f7" : "var(--color-text-muted)",
+                            background: b.premium ? "#a855f720" : "transparent",
+                          }}>
+                          {b.premium ? "💎" : "◇"}
+                        </button>
+                        {b.hidden && (
+                          <button
+                            onClick={() => {
+                              const newList = businesses.map(x => x.slug === b.slug ? { ...x, hidden: false } : x)
+                              setBusinesses(newList)
+                              persistBizList(newList)
+                              showToast("✓ Negocio aprobado y publicado")
+                            }}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold border hover:opacity-80"
+                            style={{ borderColor: "#22c55e", color: "#22c55e", background: "#22c55e18" }}
+                          >
+                            ✅ Aprobar
+                          </button>
+                        )}
+                        <Link
+                          href={`/editar/${b.slug}`}
                           className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
                           style={{
                             borderColor: "var(--color-accent)",
@@ -2363,9 +1517,9 @@ export default function AdminPage() {
                           }}
                         >
                           ✏️ Editar
-                        </button>
+                        </Link>
                         <Link
-                          href={`/business/${b.slug}`}
+                          href={`/${b.slug}?preview=1`}
                           target="_blank"
                           className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
                           style={{
@@ -2400,85 +1554,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ── PRODUCTS ── */}
-        {tab === "products" && (
-          <div>
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-              <div className="flex items-center gap-3">
-                <h2
-                  className="text-xl font-black"
-                  style={{ fontFamily: "var(--font-display)" }}
-                >
-                  Productos
-                </h2>
-                <select
-                  value={selectedSlug ?? ""}
-                  onChange={(e) => setSelectedSlug(e.target.value || null)}
-                  className="px-3 py-2 rounded-xl text-sm border outline-none"
-                  style={{
-                    background: "var(--color-surface-2)",
-                    borderColor: "var(--color-border)",
-                    color: "var(--color-text)",
-                  }}
-                >
-                  <option value="">Seleccionar negocio...</option>
-                  {businesses.map((b) => (
-                    <option key={b.slug} value={b.slug}>
-                      {getL(b.name, lang) || b.slug}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {selectedSlug && (
-                <button
-                  onClick={() =>
-                    setEditingProduct(emptyProduct(selectedProducts.length + 1))
-                  }
-                  className="px-4 py-2 rounded-xl text-sm font-bold active:scale-95"
-                  style={{ background: "var(--color-accent)", color: "white" }}
-                >
-                  + Nuevo producto
-                </button>
-              )}
-            </div>
-            {!selectedSlug ? (
-              <div
-                className="text-center py-20"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                <div className="text-5xl mb-3 opacity-20">📦</div>
-                <p>Selecciona un negocio</p>
-              </div>
-            ) : (
-              <>
-                <p
-                  className="text-xs mb-3"
-                  style={{ color: "var(--color-text-muted)" }}
-                >
-                  ⠿ Arrastra para reordenar · {selectedProducts.length}{" "}
-                  productos
-                </p>
-                <DraggableProducts
-                  products={selectedProducts}
-                  lang={lang}
-                  onEdit={setEditingProduct}
-                  onHide={(id) =>
-                    setProducts((prev) => ({
-                      ...prev,
-                      [selectedSlug]: (prev[selectedSlug] ?? []).map((p) =>
-                        p.id === id ? { ...p, hidden: !p.hidden } : p,
-                      ),
-                    }))
-                  }
-                  onDelete={deleteProduct}
-                  onReorder={(r) =>
-                    setProducts((prev) => ({ ...prev, [selectedSlug]: r }))
-                  }
-                />
-              </>
-            )}
-          </div>
-        )}
       </div>
 
       {/* ── CONFIG ── */}
@@ -2530,6 +1605,104 @@ export default function AdminPage() {
                   applyGlobalPalette(p);
                 }}
               />
+            </div>
+          </div>
+
+          {/* Marquee promotions config */}
+          <div className="rounded-2xl overflow-hidden border" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
+            <div className="px-4 py-2.5 border-b" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-2)" }}>
+              <h3 className="text-sm font-bold" style={{ fontFamily: "var(--font-display)" }}>
+                📢 Banner Marquee — Promociones
+              </h3>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                Selecciona los negocios o productos que aparecerán en el banner promocional. Los premium y patrocinados aparecen automáticamente si no hay selección.
+              </p>
+              {businesses.map(b => (
+                <div key={b.slug} className="flex items-center justify-between p-2.5 rounded-xl border" style={{ borderColor: "var(--color-border)" }}>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox"
+                      checked={(config.marqueeItems ?? []).some((m: any) => m.slug === b.slug)}
+                      onChange={e => {
+                        const cur = config.marqueeItems ?? []
+                        const updated = {
+                          ...config,
+                          marqueeItems: e.target.checked
+                            ? [...cur, { slug: b.slug, promoType: 'standard', active: true }]
+                            : cur.filter((m: any) => m.slug !== b.slug)
+                        }
+                        setConfig(updated)
+                        apiSave('config', updated)
+                      }} />
+                    <span className="text-sm font-semibold">{getL(b.name, lang)}</span>
+                  </div>
+                  {(config.marqueeItems ?? []).some((m: any) => m.slug === b.slug) && (
+                    <select
+                      value={(config.marqueeItems ?? []).find((m: any) => m.slug === b.slug)?.promoType ?? 'standard'}
+                      onChange={e => {
+                        const updated = {
+                          ...config,
+                          marqueeItems: (config.marqueeItems ?? []).map((m: any) =>
+                            m.slug === b.slug ? { ...m, promoType: e.target.value } : m
+                          )
+                        }
+                        setConfig(updated)
+                        apiSave('config', updated)
+                      }}
+                      className="text-xs px-2 py-1 rounded-lg border outline-none"
+                      style={{ background: "var(--color-surface-2)", borderColor: "var(--color-border)", color: "var(--color-text)" }}>
+                      <option value="standard">Promo estándar</option>
+                      <option value="sale">🏷️ Rebaja</option>
+                      <option value="new">✨ Nuevo</option>
+                      <option value="special">⭐ Especial</option>
+                      <option value="limited">⏳ Limitado</option>
+                    </select>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Default product image/emoji */}
+          <div className="rounded-2xl overflow-hidden border"
+            style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
+            <div className="px-4 py-2.5 border-b"
+              style={{ borderColor: "var(--color-border)", background: "var(--color-surface-2)" }}>
+              <h3 className="text-sm font-bold" style={{ fontFamily: "var(--font-display)" }}>
+                🛍️ Imagen por defecto de productos
+              </h3>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                Se muestra cuando un producto no tiene foto. Puedes poner un emoji o subir una imagen.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <TF
+                  label="Emoji por defecto"
+                  value={config.defaultProductEmoji ?? "🛍️"}
+                  onChange={v => {
+                    const updated = { ...config, defaultProductEmoji: v }
+                    setConfig(updated)
+                    apiSave('config', updated).then(() => showToast("✓ Guardado"))
+                  }}
+                  placeholder="🛍️"
+                />
+                <TF
+                  label="URL de imagen por defecto"
+                  value={config.defaultProductImage ?? ""}
+                  onChange={v => {
+                    const updated = { ...config, defaultProductImage: v }
+                    setConfig(updated)
+                    apiSave('config', updated).then(() => showToast("✓ Guardado"))
+                  }}
+                  placeholder="https://..."
+                />
+              </div>
+              {config.defaultProductImage && (
+                <img src={config.defaultProductImage} alt="" className="w-20 h-20 rounded-xl object-cover border"
+                  style={{ borderColor: "var(--color-border)" }} />
+              )}
             </div>
           </div>
 
@@ -2616,20 +1789,110 @@ export default function AdminPage() {
         </div>
       )}
 
-      {editingBiz && (
-        <BusinessModal
-          biz={editingBiz}
-          onSave={saveBiz}
-          onClose={() => setEditingBiz(null)}
-        />
-      )}
-      {editingProduct && (
-        <ProductModal
-          product={editingProduct}
-          onSave={saveProduct}
-          onClose={() => setEditingProduct(null)}
-        />
+      {/* ── REPORTS ── */}
+      {tab === "reports" && (
+        <ReportsTab />
       )}
     </div>
   );
+}
+
+// ─── Reports Tab ──────────────────────────────────────────────────────────────
+function ReportsTab() {
+  const [reports, setReports] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/reports').then(r => r.json()).then(d => {
+      setReports(d.reports ?? [])
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
+
+  const markReviewed = async (id: string) => {
+    await fetch('/api/reports', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    setReports(prev => prev.map(r => r.id === id ? { ...r, reviewed: true } : r))
+  }
+
+  const REASON_LABELS: Record<string, string> = {
+    spam: 'Spam / publicidad falsa',
+    fraud: 'Fraude / estafa',
+    offensive: 'Contenido ofensivo',
+    closed: 'Negocio cerrado',
+    other: 'Otro',
+  }
+
+  if (loading) return <div className="text-center py-12 opacity-40">⏳ Cargando reportes…</div>
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-black" style={{ fontFamily: "var(--font-display)" }}>
+          🚩 Reportes
+        </h2>
+        <span className="text-sm opacity-50">{reports.filter(r => !r.reviewed).length} sin revisar</span>
+      </div>
+      {reports.length === 0 ? (
+        <div className="text-center py-16 opacity-30">
+          <div className="text-4xl mb-2">✅</div>
+          <p>Sin reportes</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {reports.map(r => (
+            <div key={r.id}
+              className="rounded-2xl border p-4 space-y-2 transition-all"
+              style={{
+                background: r.reviewed ? "var(--color-surface)" : "#1a0a0a",
+                borderColor: r.reviewed ? "var(--color-border)" : "#ef444460",
+                opacity: r.reviewed ? 0.6 : 1,
+              }}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-sm" style={{ color: "var(--color-text)" }}>
+                      {r.name}
+                    </span>
+                    {r.email && (
+                      <span className="text-xs opacity-50">{r.email}</span>
+                    )}
+                    <span className="text-xs px-2 py-0.5 rounded-full"
+                      style={{ background: "#ef444420", color: "#f87171" }}>
+                      {REASON_LABELS[r.reason] ?? r.reason}
+                    </span>
+                    {r.reviewed && (
+                      <span className="text-xs px-2 py-0.5 rounded-full"
+                        style={{ background: "#22c55e20", color: "#22c55e" }}>
+                        ✓ Revisado
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+                    Negocio: <strong>/{r.slug}</strong> · {new Date(r.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+                {!r.reviewed && (
+                  <button
+                    onClick={() => markReviewed(r.id)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold border flex-shrink-0 hover:opacity-80"
+                    style={{ borderColor: "#22c55e", color: "#22c55e" }}
+                  >
+                    ✓ Marcar revisado
+                  </button>
+                )}
+              </div>
+              {r.description && (
+                <p className="text-sm p-3 rounded-xl" style={{ background: "var(--color-surface-2)", color: "var(--color-text-muted)" }}>
+                  {r.description}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }

@@ -1,1 +1,93 @@
-no separa por coma las categorisa
+no separa por coma las categorias y ni las palabras claves
+agregar al producto una lista de imagenes ademas de la imagen principal para que hayan otros ejemplos y que al tocar el producto se puedan mostrar tipo galeria que se vea la imagen del producto en la parte superior con un degradado con el nombre la descripcion el precio y sus detalles parecido a la vista del negocio y debajo salgan las imagenes tipo feed de instagram y que se puedan abrir en patanlla completa
+que los productos y los negocios tengan un boton compartir que utilice la funcion share para enviarlo por whatsapp o algo asi o copiarlo al portapaleles
+agregar slogan de la empresa ademas de la descripción y que se muestre en el catalogo de negocios
+en el scroll cuando el header se pone de color solido que salga el logo y a la rerecha del logo el nombre del negocio debajo del nombre que salga abierto/cerrado hasta (si es el mismo dia? la hora, si es otro dia, el dia y la hora de apertura, si es cierre, la hora del cierre) ejemplos: abierto hasta 4:00 PM (cantidad de horas), cerrado hasta 8:00 PM(cantidad de horas), cerrado hasta el lunes 8:00 AM (cantidad de horas)
+el cartel de abierto o cerrado tanto en el header como en el catálogo de negocios, que salga en color verde para abierto, rojo para cerrado, naranja para un estado nuevo que seria no disponible por el momento (este estado se marcaria en la gestion de los negocios para indicar que no estan trabajando pero se pueda ver todos los detalles del negocio).
+hacer un banner tipo marquee promocional primero encima completamente y luego de hacer scroll que se ubique debajo del header de color solido,  para mostrar contenidos de otros negocios y enlaces a sus catalogos, se puede promocionar el negocio o un producto especifico, que en la configuración del negocio pueda habilitar un campo que diga activar promociones, y tenga la lista de articulos con unos checks para seleccionar los que se quieran promocionar, las promociones de articulo deben ser, rebaja, articulo nuevo, oferta especial, ediciones limitadas, promocion estandar(esta es por defecto, las demás que se diferecien con un texto en la promocion)
+poner otro campo en los negocios que sea para marcar el negocio como premium para brindarle funcionalidades adicionales, los premium deben salir primero que los patrocinados cuando se marque en patrocinados en el filtro o en la lista normal de negocios. es decir  ordenarse como premium, patrocinados, comunes
+hace un buscar en los productos del negocio poniendo al lupita en el header, simplificar el boton de cambio de idioma para hacerlo mas pequeño
+en la pagina principal del negocios que tambien salga el banner tipo marquee pero debajo del hero, mas grande y que salgan los logos de los negocios junto a la informacion.
+Cuando estoy dentro de un negocio que el boton de atras tenga un diseño similar al atras de ios
+en el footer que salga un boton de registar negocio, que lleve a una pagina que sea el modal para crear el negocio, en una de las pestañas de la creacion del negocio agrega productos que muestre la lista de los productos y ahi mismo muestre el modal para agregar y modificar, utiliza esta misma pagina para que el admin cree los negocios, para que el componente no este repetido, la diferencia es que antes de mostrar el modal pedir una contraseña que se almacene en el negocio de forma encriptada y genere un codigo aleatorio para identificar al negocio
+entonces el admin se seguira autenticando con una contraseña maestra para gestionar los negocios
+y en una ruta /editar/bisne pida autenticacion con el codigo del negocio y la contraseña puesta entonces cargue esa vista con todos los detalles
+el admin podrá reiniciar las contraseñas de los negocios poniendo una manualmente.
+los campos patrocinado, y premium del negocio solo los puede poner el administrador, pero que en los negocios salga una pestaña Patrocinio, Funciones Premium, Promocionar que salgan deshabilitados hasta que se activen los campos en el negocio
+que el estado de patrocinado o premium salga representado en la vista de editar el negocio.
+que la imagen por defecto de los productos sea personalizable al igual que el emoji por defecto, que se configure en la parte del tema.
+el admin puede modificar las funcionalidades de patrocinio, premiun y promocionar  sin que el negocio tenga estos campos activos
+que la cantidad de articulos de los negocios comunes sea 10, de los patrocinados 20 de los premium ilimitados.
+que la cantidad de imagenes por articulo  de los negocios comunes sea 3 de los patrocinados 5 y de los premium 10,que los premium puedan poner 4 imagenes de portada adicionales y que se cambien en la portada como si fuera una presentación
+crea la vista que describa los ditintos planes, el comun, el patrocinado y el premium y un enlace a los planes en el footer y en el header
+
+Agregar al producto una lista de imágenes además de la imagen principal para que haya otros ejemplos. Al tocar el producto se deben mostrar tipo galería, donde se vea la imagen del producto en la parte superior con un degradado con el nombre la descripción el precio y sus detalles, parecido a la vista del negocio. Debajo deben salir las imágenes tipo feed de Instagram y que se puedan abrir en pantalla completa.
+Que los productos y los negocios tengan un botón compartir que utilice la función share para enviarlo por WhatsApp o copiarlo al portapapeles.
+Agregar slogan de la empresa además de la descripción y que se muestre en el catálogo de negocios.
+En el scroll, cuando el header se ponga de color sólido, que salga el logo y a la derecha del logo el nombre del negocio. Debajo del nombre debe salir abierto o cerrado hasta:
+Si es el mismo día mostrar la hora
+Si es otro día mostrar el día y la hora de apertura
+Si es cierre mostrar la hora de cierre
+Ejemplos:
+abierto hasta 4:00 PM (cantidad de horas)
+cerrado hasta 8:00 PM (cantidad de horas)
+cerrado hasta el lunes 8:00 AM (cantidad de horas)
+El cartel de abierto o cerrado, tanto en el header como en el catálogo de negocios, debe salir en color verde para abierto, rojo para cerrado y naranja para un estado nuevo que sería no disponible por el momento. Este estado se marcaría en la gestión de los negocios para indicar que no están trabajando pero se puedan ver todos los detalles del negocio.
+Hacer un banner tipo marquee promocional primero encima completamente y luego, al hacer scroll, que se ubique debajo del header de color sólido para mostrar contenidos de otros negocios y enlaces a sus catálogos. Se puede promocionar el negocio o un producto específico.
+En la configuración del negocio debe existir un campo que diga activar promociones y tener una lista de artículos con checks para seleccionar los que se quieran promocionar.
+Las promociones de artículos deben ser:
+rebaja
+artículo nuevo
+oferta especial
+ediciones limitadas
+promoción estándar (esta es por defecto y las demás se diferencian con un texto en la promoción)
+Agregar otro campo en los negocios para marcar el negocio como premium y brindarle funcionalidades adicionales.
+Los premium deben salir primero que los patrocinados cuando se marque el filtro de patrocinados o en la lista normal de negocios.
+Orden de visualización:
+premium
+patrocinados
+comunes
+Hacer un buscador de productos dentro del negocio poniendo la lupita en el header.
+Simplificar el botón de cambio de idioma para hacerlo más pequeño.
+En la página principal de negocios también debe salir el banner tipo marquee, pero debajo del hero, más grande, y que salgan los logos de los negocios junto a la información.
+Cuando estoy dentro de un negocio, el botón de atrás debe tener un diseño similar al de iOS.
+En el footer debe salir un botón de registrar negocio que lleve a una página que sea el modal para crear el negocio.
+En una de las pestañas de la creación del negocio agregar productos, que muestre la lista de productos y ahí mismo el modal para agregar o modificar.
+Utilizar esta misma página para que el admin cree los negocios, para que el componente no esté repetido.
+La diferencia es que antes de mostrar la pagina se debe pedir una contraseña, que se almacene en el negocio de forma encriptada y genere un código aleatorio para identificar al negocio mostrarselo al usuario y explicarle para lo que es que es para autenticarse con ese codigo y su contraseña, tambien puede ser con el slug del negocio y la contraseña
+En una ruta /editar/bisne se debe pedir autenticación con el código del negocio y la contraseña. Entonces se cargará esa vista con todos los detalles para gestionarlos
+Entonces el admin se seguirá autenticando con una contraseña maestra para gestionar los negocios.
+El admin podrá reiniciar las contraseñas de los negocios poniéndolas manualmente.
+Los campos patrocinado y premium del negocio solo los puede poner el administrador, pero en los negocios debe existir una pestaña llamada:
+Patrocinio
+Funciones Premium
+Promocionar
+Estos deben aparecer deshabilitados hasta que el administrador active esos campos en el negocio.
+El estado de patrocinado o premium debe mostrarse representado en la vista de editar negocio.
+La imagen por defecto de los productos debe ser personalizable, al igual que el emoji por defecto, y configurarse en la parte del tema.
+El admin puede modificar las funcionalidades de patrocinio premium y promocionar aunque el negocio no tenga estos campos activos.
+La cantidad de artículos permitidos debe ser:
+negocios comunes → 10
+negocios patrocinados → 20
+negocios premium → ilimitados
+La cantidad de imágenes por artículo debe ser:
+negocios comunes → 3
+negocios patrocinados → 6
+negocios premium → 9
+Los negocios premium además pueden poner 4 imágenes de portada adicionales, que cambien en la portada como si fuera una presentación.
+Crear una vista que describa los distintos planes:
+común
+patrocinado
+premium
+Agregar un enlace a los planes en el footer y en el header.
+
+unifica el modal de editar el negocio y los productos del administrador, con los formularios de autoregistrar un negocio, la vista final debe ser tipo pagina con todos los campos existentes en las dos variantes, falta agregar la imagen por defecto para los productos y el emogi por defecto en la parte del tema, deben existir todas las paletas de colores
+poner una fecha de creacion del negocio y si es nuevo ponerlos una semana de primeros desde la fecha de creacion hasta una semana despues con la etiqueda nuevo en el mismo lugar de la etiqueta patrocinado, si esta patrocinado que salga debajo, que el color sea del tema principal del catalogo de negocios y tambien tenga un borde luminoso el card del negocio
+en el checkout del carrito que se pueda escribir un mensaje al dueño con una descripcion hasta 150 caracteres
+funcion de reportar negocio que pida información al cliente y detalles del reporte y se guarden en un archivo para como admin poder revisarlas luego
+crear codigos promocionales en una de las pestañas del negocio, que sea una funcion premiun que se pueda poner en el carrito y se valide con los codigos declarados en el negocio y se envie en la informacion del pedido
+si se entra a un negocio con la url /mi-negocio?code=raul-promo-code ese code si identifique como codigo promocional y se guarde en el localstorage hasta que se salga del sitio, debe salir por defecto en el checkout
+el abierto hasta en los detalles del negocio que salga debjo de la descripcion y que el el contenedor de la palabra abierto solo ocupe el espacio de la palabra 
+que los controles de la galeria tengan los colores del tema
+los negocios creados deben estar ocultos por defecto para que el admin los apruebe
+la peticion de login despues de autoregistrar un negocio debe esperar que la peticion de registrarlo regrese para que el login no falle

@@ -1,11 +1,13 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Business, BusinessDetail } from "@/types";
 import { applyHomeTheme } from "@/lib/palette";
 import { isOpenNow } from "@/lib/schedule";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { LangToggle } from "@/components/ui/LangToggle";
+import { MarqueeBanner } from "@/components/ui/MarqueeBanner";
 import { useLang } from "@/hooks/useLang";
+import Link from "next/link";
 
 // ─── Dev Contact Modal ────────────────────────────────────────────────────────
 function DevContactModal({
@@ -233,6 +235,24 @@ export default function HomeClient({ initialBusinesses, initialDetails, initialC
   const [details] = useState<Record<string, BusinessDetail>>(initialDetails)
   const [config] = useState<any>(initialConfig)
   const [showDevContact, setShowDevContact] = useState(false)
+  const [promotedProducts, setPromotedProducts] = useState<Array<{biz: Business; product: any}>>([])
+
+  // Fetch promoted products from premium businesses
+  useEffect(() => {
+    const premiumBiz = businesses.filter(b => b.premium)
+    if (premiumBiz.length === 0) return
+    Promise.all(
+      premiumBiz.map(biz =>
+        fetch(`/api/data?file=${biz.slug}-products`)
+          .then(r => r.ok ? r.json() : { products: [] })
+          .then(data => (data.products ?? [])
+            .filter((p: any) => p.promote && p.promote !== 'NO' && !p.hidden)
+            .map((p: any) => ({ biz, product: p }))
+          )
+          .catch(() => [])
+      )
+    ).then(results => setPromotedProducts(results.flat()))
+  }, [businesses])
 
   // Apply theme from config on mount
   useEffect(() => {
@@ -290,11 +310,15 @@ export default function HomeClient({ initialBusinesses, initialDetails, initialC
     paypal: "PayPal",
   };
 
-  // Sort: sponsored first, then filter
+  // Sort: premium > sponsored > common
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return businesses
-      .sort((a, b) => (b.sponsored ? 1 : 0) - (a.sponsored ? 1 : 0))
+      .sort((a, b) => {
+        const tierA = a.premium ? 2 : a.sponsored ? 1 : 0;
+        const tierB = b.premium ? 2 : b.sponsored ? 1 : 0;
+        return tierB - tierA;
+      })
       .filter((biz) => {
         const d = details[biz.slug];
         // Search
@@ -360,9 +384,44 @@ export default function HomeClient({ initialBusinesses, initialDetails, initialC
 
   const dev = config?.developer ?? {};
 
+  // Build marquee items: configured items + promoted products from premium businesses
+  const marqueeItems = useMemo(() => {
+    const configured = (config?.marqueeItems ?? []) as Array<{slug: string; promoType: string; active: boolean}>
+    const items: any[] = []
+
+    // Admin-configured business items
+    if (configured.length > 0) {
+      configured
+        .filter(m => m.active !== false)
+        .forEach(m => {
+          const biz = businesses.find(b => b.slug === m.slug)
+          if (!biz) return
+          items.push({ biz, detail: details[m.slug], promo: { ...m, promoType: m.promoType as any } })
+        })
+    } else {
+      // Auto: sponsored/premium businesses
+      const featured = businesses.filter(b => b.sponsored || b.premium)
+      const pool = featured.length >= 3 ? featured : businesses.slice(0, 8)
+      pool.forEach(biz => items.push({ biz, detail: details[biz.slug] }))
+    }
+
+    // Add promoted products from premium businesses (interleaved)
+    promotedProducts.forEach(({ biz, product }) => {
+      items.push({
+        biz,
+        detail: details[biz.slug],
+        promo: { promoType: product.promote },
+        productName: (lang === 'es' ? product.name?.es : product.name?.en) || product.name?.es,
+        productImage: product.image,
+      })
+    })
+
+    return items
+  }, [businesses, details, config, promotedProducts, lang])
+
   return (
     <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
-      {/* ── Header ── */}
+      {/* ── Header with sticky marquee ── */}
       <header
         className="sticky top-0 z-30 border-b backdrop-blur-md"
         style={{
@@ -385,6 +444,12 @@ export default function HomeClient({ initialBusinesses, initialDetails, initialC
           </div>
           <LangToggle lang={lang} setLang={setLang} />
         </div>
+        {/* Marquee below nav — always visible at top */}
+        {marqueeItems.length > 0 && (
+          <div className="border-t" style={{ borderColor: "var(--color-border)" }}>
+            <MarqueeBanner items={marqueeItems} lang={lang} size="lg" />
+          </div>
+        )}
       </header>
 
       {/* ── Hero ── */}
@@ -625,32 +690,54 @@ export default function HomeClient({ initialBusinesses, initialDetails, initialC
 
       {/* ── Footer ── */}
       <footer
-        className="border-t py-10 text-center"
+        className="border-t py-10"
         style={{ borderColor: "var(--color-border)" }}
       >
-        <p
-          className="text-xs mb-1"
-          style={{ color: "var(--color-text-muted)" }}
-        >
-          {lang === "es" ? "Desarrollado por" : "Developed by"}
-        </p>
-        <p
-          className="font-bold text-sm mb-3"
-          style={{ color: "var(--color-text)" }}
-        >
-          {dev.name || "Dev Studio"}
-        </p>
-        <button
-          onClick={() => setShowDevContact(true)}
-          className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold border transition-all hover:opacity-80 active:scale-95"
-          style={{
-            borderColor: "var(--color-border)",
-            color: "var(--color-text)",
-            background: "var(--color-surface)",
-          }}
-        >
-          💬 {lang === "es" ? "Contactar desarrollador" : "Contact developer"}
-        </button>
+        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="text-center sm:text-left">
+            <p className="text-xs mb-1" style={{ color: "var(--color-text-muted)" }}>
+              {lang === "es" ? "Desarrollado por" : "Developed by"}
+            </p>
+            <p className="font-bold text-sm mb-3" style={{ color: "var(--color-text)" }}>
+              {dev.name || "Dev Studio"}
+            </p>
+            <button
+              onClick={() => setShowDevContact(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border transition-all hover:opacity-80 active:scale-95"
+              style={{
+                borderColor: "var(--color-border)",
+                color: "var(--color-text)",
+                background: "var(--color-surface)",
+              }}
+            >
+              💬 {lang === "es" ? "Contactar" : "Contact"}
+            </button>
+          </div>
+
+          <div className="flex flex-col items-center sm:items-end gap-3">
+            <Link
+              href="/planes"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border transition-all hover:opacity-80"
+              style={{
+                borderColor: "var(--color-accent)",
+                color: "var(--color-accent)",
+                background: "var(--color-accent)" + "10",
+              }}
+            >
+              💎 {lang === "es" ? "Ver planes" : "View plans"}
+            </Link>
+            <Link
+              href="/registrar"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:opacity-90 active:scale-95"
+              style={{
+                background: "var(--color-accent)",
+                color: "white",
+              }}
+            >
+              🏪 {lang === "es" ? "Registrar mi negocio" : "Register my business"}
+            </Link>
+          </div>
+        </div>
       </footer>
 
       {showDevContact && config?.developer && (

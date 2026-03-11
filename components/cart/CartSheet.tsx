@@ -1,7 +1,7 @@
 'use client'
-import { CartItem, Product, Lang, BusinessDetail } from '@/types'
+import { CartItem, Product, Lang, BusinessDetail, PromoCode } from '@/types'
 import { getL } from '@/lib/data'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface CartSheetProps {
   items: CartItem[]
@@ -17,11 +17,66 @@ interface CartSheetProps {
   onClear: () => void
   onClose: () => void
   donationsEnabled: boolean
+  promoCodes?: PromoCode[]
+  initialPromoCode?: string   // from URL ?code=
 }
 
-export function CartSheet({ items, productsById, business, businessName, slug, lang, cartParam, total, onUpdate, onRemove, onClear, onClose, donationsEnabled }: CartSheetProps) {
+export function CartSheet({ items, productsById, business, businessName, slug, lang, cartParam, total, onUpdate, onRemove, onClear, onClose, donationsEnabled, promoCodes = [], initialPromoCode }: CartSheetProps) {
   const [copied, setCopied] = useState(false)
   const [showDonation, setShowDonation] = useState(false)
+  const [orderNote, setOrderNote] = useState('')
+  const [promoInput, setPromoInput] = useState(initialPromoCode ?? '')
+  const [appliedCode, setAppliedCode] = useState<PromoCode | null>(null)
+  const [promoError, setPromoError] = useState('')
+
+  // Load saved promo code from localStorage on mount
+  useEffect(() => {
+    const storageKey = `biz_promo_${slug}`
+    const saved = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null
+    const codeToTry = initialPromoCode ?? saved ?? ''
+    if (codeToTry && promoCodes.length > 0) {
+      const found = promoCodes.find(c => c.id.toLowerCase() === codeToTry.toLowerCase() && c.active)
+      if (found) {
+        const now = new Date()
+        if (!found.expiresAt || new Date(found.expiresAt) > now) {
+          setAppliedCode(found)
+          setPromoInput(found.id)
+        }
+      }
+    } else if (codeToTry) {
+      setPromoInput(codeToTry)
+    }
+  }, [initialPromoCode, promoCodes, slug])
+
+  const applyCode = () => {
+    setPromoError('')
+    const code = promoCodes.find(c => c.id.toLowerCase() === promoInput.toLowerCase())
+    if (!code) { setPromoError(lang === 'es' ? 'Código no válido' : 'Invalid code'); return }
+    if (!code.active) { setPromoError(lang === 'es' ? 'Código inactivo' : 'Inactive code'); return }
+    if (code.expiresAt && new Date(code.expiresAt) < new Date()) {
+      setPromoError(lang === 'es' ? 'Código vencido' : 'Code expired'); return
+    }
+    setAppliedCode(code)
+    // Persist to localStorage for this business
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`biz_promo_${slug}`, code.id)
+    }
+  }
+
+  const removeCode = () => {
+    setAppliedCode(null)
+    setPromoInput('')
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(`biz_promo_${slug}`)
+    }
+  }
+
+  const discountAmount = appliedCode
+    ? appliedCode.type === 'percent'
+      ? total * (appliedCode.discount / 100)
+      : Math.min(appliedCode.discount, total)
+    : 0
+  const finalTotal = Math.max(0, total - discountAmount)
 
   const shareUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/view/${slug}?c=${cartParam}`
@@ -43,7 +98,9 @@ export function CartSheet({ items, productsById, business, businessName, slug, l
 
     const msg = (lang === 'es' ? `Hola *${businessName}*! Me gustaría ordenar:\n\n` : `Hello *${businessName}*! I'd like to order:\n\n`)
       + lines.join('\n')
-      + `\n\n*Total: $${total.toFixed(2)}*`
+      + `\n\n*Subtotal: $${total.toFixed(2)}*`
+      + (appliedCode ? `\n🎟️ Código *${appliedCode.id}*: -$${discountAmount.toFixed(2)}\n*Total: $${finalTotal.toFixed(2)}*` : '')
+      + (orderNote.trim() ? `\n\n📝 ${orderNote.trim()}` : '')
       + (shareUrl ? `\n\n🔗 ${shareUrl}` : '')
 
     return `https://wa.me/${business.phone}?text=${encodeURIComponent(msg)}`
@@ -145,14 +202,90 @@ export function CartSheet({ items, productsById, business, businessName, slug, l
         </div>
       )}
 
+      {/* Order note */}
+      <div className="px-4 pb-2">
+        <textarea
+          value={orderNote}
+          onChange={e => setOrderNote(e.target.value.slice(0, 150))}
+          placeholder={lang === 'es' ? '📝 Mensaje para el negocio (opcional)…' : '📝 Message for the business (optional)…'}
+          rows={2}
+          className="w-full px-3 py-2 rounded-xl border text-sm resize-none outline-none"
+          style={{ background: 'var(--biz-surface2)', borderColor: 'var(--biz-border)', color: 'var(--biz-text)' }}
+        />
+        <p className="text-right text-[10px] mt-0.5" style={{ color: 'var(--biz-text-muted)' }}>
+          {orderNote.length}/150
+        </p>
+      </div>
+
       {/* Footer */}
       <div className="p-4 space-y-3 border-t" style={{ borderColor: 'var(--biz-border)' }}>
+
+        {/* Promo code — only for premium businesses with codes */}
+        {promoCodes.length > 0 && (
+          <div className="space-y-2">
+            {appliedCode ? (
+              <div className="flex items-center justify-between px-3 py-2 rounded-xl"
+                style={{ background: 'var(--biz-accent)20', border: '1px solid var(--biz-accent)40' }}>
+                <div>
+                  <span className="text-xs font-black" style={{ color: 'var(--biz-accent)' }}>
+                    🎟️ {appliedCode.id}
+                  </span>
+                  <span className="text-xs ml-2" style={{ color: 'var(--biz-text-muted)' }}>
+                    -{appliedCode.type === 'percent' ? `${appliedCode.discount}%` : `$${appliedCode.discount}`}
+                  </span>
+                </div>
+                <button onClick={removeCode} className="text-xs opacity-50 hover:opacity-100" style={{ color: 'var(--biz-text)' }}>✕</button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  value={promoInput}
+                  onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoError('') }}
+                  placeholder={lang === 'es' ? '🎟️ Código promocional' : '🎟️ Promo code'}
+                  className="flex-1 px-3 py-2 rounded-xl text-xs border outline-none font-mono font-bold tracking-widest"
+                  style={{ background: 'var(--biz-surface)', borderColor: promoError ? '#ef4444' : 'var(--biz-border)', color: 'var(--biz-text)' }}
+                  onKeyDown={e => e.key === 'Enter' && applyCode()}
+                />
+                <button onClick={applyCode}
+                  className="px-3 py-2 rounded-xl text-xs font-bold"
+                  style={{ background: 'var(--biz-accent)', color: 'var(--biz-accent-text)' }}>
+                  {lang === 'es' ? 'Aplicar' : 'Apply'}
+                </button>
+              </div>
+            )}
+            {promoError && <p className="text-xs font-semibold" style={{ color: '#ef4444' }}>{promoError}</p>}
+          </div>
+        )}
+
         <div className="flex justify-between items-center">
-          <span className="text-sm" style={{ color: 'var(--biz-text-muted)' }}>Total</span>
+          <span className="text-sm" style={{ color: 'var(--biz-text-muted)' }}>
+            {appliedCode ? (lang === 'es' ? 'Subtotal' : 'Subtotal') : (lang === 'es' ? 'Total' : 'Total')}
+          </span>
           <span className="text-2xl font-black" style={{ fontFamily: 'var(--font-display)', color: 'var(--biz-price)' }}>
             ${total.toFixed(2)}
           </span>
         </div>
+
+        {appliedCode && discountAmount > 0 && (
+          <>
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-semibold" style={{ color: 'var(--biz-accent)' }}>
+                🎟️ {lang === 'es' ? 'Descuento' : 'Discount'} ({appliedCode.id})
+              </span>
+              <span className="text-lg font-black" style={{ color: 'var(--biz-accent)' }}>
+                -${discountAmount.toFixed(2)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center border-t pt-2" style={{ borderColor: 'var(--biz-border)' }}>
+              <span className="text-sm font-bold" style={{ color: 'var(--biz-text)' }}>
+                {lang === 'es' ? 'Total con descuento' : 'Discounted total'}
+              </span>
+              <span className="text-2xl font-black" style={{ fontFamily: 'var(--font-display)', color: 'var(--biz-price)' }}>
+                ${finalTotal.toFixed(2)}
+              </span>
+            </div>
+          </>
+        )}
 
         <button
           onClick={() => window.open(buildWhatsApp(), '_blank')}

@@ -5,17 +5,17 @@ export function LangToggle({ lang, setLang }: { lang: Lang; setLang: (l: Lang) =
   return (
     <button
       onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
-      className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border transition-all hover:opacity-80"
+      title={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
+      className="flex items-center justify-center w-8 h-8 rounded-full text-xs font-black border transition-all hover:opacity-80 flex-shrink-0"
       style={{
         border: '1px solid var(--biz-border, var(--color-border))',
-        color: 'var(--biz-text-muted, var(--color-text-muted))',
+        color: 'var(--biz-accent, var(--color-accent))',
         background: 'var(--biz-surface2, var(--color-surface-2))',
         fontFamily: 'var(--font-display)',
+        fontSize: 11,
       }}
     >
-      <span style={{ color: lang === 'es' ? 'var(--biz-accent, var(--color-accent))' : undefined }}>ES</span>
-      <span className="opacity-30">/</span>
-      <span style={{ color: lang === 'en' ? 'var(--biz-accent, var(--color-accent))' : undefined }}>EN</span>
+      {lang === 'es' ? 'EN' : 'ES'}
     </button>
   )
 }

@@ -1,5 +1,5 @@
 import { headers } from 'next/headers'
-import { fetchBusinesses, fetchBusinessDetail, fetchProducts } from '@/lib/api'
+import { fetchBusinesses, fetchBusinessDetail, fetchProducts, fetchConfig } from '@/lib/api'
 import { BusinessPageClient } from '../business/[slug]/BusinessPageClient'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -29,8 +29,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
-export default async function BusinessPage({ params }: { params: { slug: string } }) {
-  const reserved = ['admin', 'login', 'view', 'api', '_next']
+export default async function BusinessPage({ params, searchParams }: { params: { slug: string }; searchParams: { preview?: string } }) {
+  const reserved = ['admin', 'login', 'view', 'api', '_next', 'editar', 'registrar', 'planes']
   if (reserved.includes(params.slug)) notFound()
 
   const base = getBaseUrl()
@@ -38,12 +38,24 @@ export default async function BusinessPage({ params }: { params: { slug: string 
   const business = businesses.find(b => b.slug === params.slug)
   if (!business) notFound()
 
-  const [detail, products] = await Promise.all([
+  // Hidden businesses: only accessible via ?preview=1 (owner will authenticate client-side)
+  const isPreview = searchParams.preview === '1'
+  if (business.hidden && !isPreview) notFound()
+
+  const [detail, products, config] = await Promise.all([
     fetchBusinessDetail(params.slug, base),
     fetchProducts(params.slug, base),
+    fetchConfig(base),
   ])
 
   const visibleProducts = products.filter(p => !p.hidden)
 
-  return <BusinessPageClient business={business} detail={detail} products={visibleProducts} slug={params.slug} />
+  return <BusinessPageClient
+    business={business!}
+    detail={detail}
+    products={visibleProducts}
+    slug={params.slug}
+    isPreview={isPreview && !!business.hidden}
+    appConfig={config}
+  />
 }

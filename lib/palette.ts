@@ -14,6 +14,12 @@ export function applyPalette(palette?: BusinessPalette) {
   r.style.setProperty('--biz-text', p.text)
   r.style.setProperty('--biz-text-muted', p.textMuted)
   r.style.setProperty('--biz-price', p.priceColor)
+  // Animated themes
+  if (p.animated && p.animationKey) {
+    injectAnimatedThemeCSS(p.animationKey)
+  } else {
+    removeAnimatedThemeCSS()
+  }
 }
 
 export function applyHomeTheme(palette?: BusinessPalette) {
@@ -162,4 +168,161 @@ export const PRESET_PALETTES = ALL_PALETTES
 
 export function applyGlobalPalette(palette: BusinessPalette) {
   applyHomeTheme(palette)
+}
+
+// ═══════════════════════════════════════════════════════
+// ANIMATED PALETTES — Premium only
+// Base colors + animation key; CSS handles the animation
+// ═══════════════════════════════════════════════════════
+export const ANIMATED_PALETTES: { name: string; palette: import('@/types').BusinessPalette }[] = [
+  {
+    name: '🎮 Gamer',
+    palette: {
+      name: '🎮 Gamer', tier: 'premium', animated: true, animationKey: 'gamer',
+      accent: '#00ff88', accentText: '#000', accentSoft: '#00ff8820',
+      bg: '#030609', surface: '#0a1020', surface2: '#101830',
+      border: '#1a2840', text: '#e0f8ff', textMuted: '#4a8898', priceColor: '#00ff88',
+    }
+  },
+  {
+    name: '🌌 Aurora',
+    palette: {
+      name: '🌌 Aurora', tier: 'premium', animated: true, animationKey: 'aurora',
+      accent: '#a855f7', accentText: '#fff', accentSoft: '#a855f720',
+      bg: '#02040a', surface: '#080c1a', surface2: '#0e1428',
+      border: '#1a2040', text: '#e8f0ff', textMuted: '#5868a0', priceColor: '#38bdf8',
+    }
+  },
+  {
+    name: '💜 Neon Pulse',
+    palette: {
+      name: '💜 Neon Pulse', tier: 'premium', animated: true, animationKey: 'neon-pulse',
+      accent: '#ff00aa', accentText: '#fff', accentSoft: '#ff00aa20',
+      bg: '#040010', surface: '#0c0020', surface2: '#14003a',
+      border: '#200060', text: '#fdf0ff', textMuted: '#8040c0', priceColor: '#00ffee',
+    }
+  },
+  {
+    name: '🤖 Cyber',
+    palette: {
+      name: '🤖 Cyber', tier: 'premium', animated: true, animationKey: 'cyber',
+      accent: '#ffee00', accentText: '#000', accentSoft: '#ffee0020',
+      bg: '#000508', surface: '#020e18', surface2: '#041828',
+      border: '#083040', text: '#c8f8ff', textMuted: '#306880', priceColor: '#ff4400',
+    }
+  },
+  {
+    name: '🌈 Rainbow Flow',
+    palette: {
+      name: '🌈 Rainbow Flow', tier: 'premium', animated: true, animationKey: 'rainbow',
+      accent: '#f97316', accentText: '#fff', accentSoft: '#f9731620',
+      bg: '#04040a', surface: '#0c0c1c', surface2: '#14142c',
+      border: '#1e1e3e', text: '#faf8ff', textMuted: '#6060a0', priceColor: '#f97316',
+    }
+  },
+]
+
+// Add tier markers to existing palettes
+export const STANDARD_PALETTES = DARK_PALETTES.concat(LIGHT_PALETTES).map(p => ({
+  ...p, palette: { ...p.palette, tier: 'standard' as const }
+}))
+export const FESTIVE_PALETTES = HOLIDAY_PALETTES.map(p => ({
+  ...p, palette: { ...p.palette, tier: 'sponsored' as const }
+}))
+
+export const ALL_PALETTES_TIERED = [
+  ...STANDARD_PALETTES,
+  ...FESTIVE_PALETTES,
+  ...ANIMATED_PALETTES,
+]
+
+// ─── Animated theme CSS injection ───────────────────────────────────────────
+export function injectAnimatedThemeCSS(animationKey?: string) {
+  if (typeof document === 'undefined' || !animationKey) return
+  // Clean up previous
+  document.getElementById('bisne-animated-theme')?.remove()
+  const el = document.createElement('style')
+  el.id = 'bisne-animated-theme'
+
+  const css: Record<string, string> = {
+    // 🎮 Gamer = Aurora RGB: blobs of green/cyan/magenta cycling like an RGB backlight
+    gamer: `
+      @keyframes gamer-blob1 { 0%,100%{transform:translate(-10%,-20%) scale(1.1)} 33%{transform:translate(30%,10%) scale(1.4)} 66%{transform:translate(10%,30%) scale(0.9)} }
+      @keyframes gamer-blob2 { 0%,100%{transform:translate(30%,10%) scale(1.2)} 33%{transform:translate(-20%,30%) scale(0.9)} 66%{transform:translate(20%,-20%) scale(1.3)} }
+      @keyframes gamer-blob3 { 0%,100%{transform:translate(10%,30%) scale(0.9)} 33%{transform:translate(10%,-20%) scale(1.3)} 66%{transform:translate(-20%,10%) scale(1.1)} }
+      @keyframes gamer-hue   { 0%{filter:hue-rotate(0deg) blur(60px)} 100%{filter:hue-rotate(360deg) blur(60px)} }
+      .biz-page-anim-layer { content:''; position:fixed; inset:0; pointer-events:none; z-index:0; }
+      .biz-page-anim-blob1 { position:fixed; width:60vw; height:60vw; border-radius:50%; background:#00ff88; opacity:0.18; pointer-events:none; z-index:0; animation:gamer-blob1 7s ease-in-out infinite; filter:blur(80px); }
+      .biz-page-anim-blob2 { position:fixed; width:50vw; height:50vw; border-radius:50%; background:#00ccff; opacity:0.16; pointer-events:none; z-index:0; animation:gamer-blob2 9s ease-in-out infinite; filter:blur(70px); }
+      .biz-page-anim-blob3 { position:fixed; width:45vw; height:45vw; border-radius:50%; background:#ff00cc; opacity:0.14; pointer-events:none; z-index:0; animation:gamer-blob3 11s ease-in-out infinite; filter:blur(90px); }
+    `,
+    // 🌌 Aurora: purple/teal/pink nebula lights
+    aurora: `
+      @keyframes aurora-blob1 { 0%,100%{transform:translate(-20%,-10%) scale(1.2) rotate(-15deg)} 50%{transform:translate(20%,15%) scale(1.5) rotate(15deg)} }
+      @keyframes aurora-blob2 { 0%,100%{transform:translate(25%,15%) scale(1.3) rotate(10deg)} 50%{transform:translate(-15%,-5%) scale(1.0) rotate(-20deg)} }
+      @keyframes aurora-blob3 { 0%,100%{transform:translate(-5%,20%) scale(1.0) rotate(5deg)} 50%{transform:translate(15%,-25%) scale(1.4) rotate(-10deg)} }
+      .biz-page-anim-blob1 { position:fixed; width:80vw; height:50vh; border-radius:50%; background:#a855f7; opacity:0.22; pointer-events:none; z-index:0; animation:aurora-blob1 9s ease-in-out infinite; filter:blur(60px); }
+      .biz-page-anim-blob2 { position:fixed; width:70vw; height:60vh; border-radius:50%; background:#06b6d4; opacity:0.18; pointer-events:none; z-index:0; animation:aurora-blob2 11s ease-in-out infinite; filter:blur(70px); }
+      .biz-page-anim-blob3 { position:fixed; width:60vw; height:40vh; border-radius:50%; background:#ec4899; opacity:0.16; pointer-events:none; z-index:0; animation:aurora-blob3 8s ease-in-out infinite; filter:blur(80px); }
+    `,
+    // 💜 Neon Pulse: color-cycling scanline + pulse glow
+    'neon-pulse': `
+      @keyframes np-blob1 { 0%,100%{transform:translate(-30%,-20%) scale(1.1)} 50%{transform:translate(20%,20%) scale(1.4)} }
+      @keyframes np-blob2 { 0%,100%{transform:translate(20%,20%) scale(1.3)} 50%{transform:translate(-20%,-10%) scale(0.9)} }
+      @keyframes np-hue    { 0%{filter:hue-rotate(0deg) blur(70px)} 100%{filter:hue-rotate(360deg) blur(70px)} }
+      @keyframes np-scan   { 0%{top:-4px;opacity:0.4} 80%{opacity:0.3} 100%{top:100%;opacity:0} }
+      @keyframes np-flicker { 0%,90%,100%{opacity:1} 93%{opacity:0.85} 96%{opacity:0.9} }
+      .biz-page-anim-blob1 { position:fixed; width:70vw; height:70vw; border-radius:50%; background:#ff00aa; opacity:0.20; pointer-events:none; z-index:0; animation:np-blob1 8s ease-in-out infinite, np-hue 6s linear infinite; filter:blur(70px); }
+      .biz-page-anim-blob2 { position:fixed; width:60vw; height:60vw; border-radius:50%; background:#00ffee; opacity:0.15; pointer-events:none; z-index:0; animation:np-blob2 10s ease-in-out infinite; filter:blur(80px); }
+      .biz-page-anim-scan  { position:fixed; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,#ff00aa80,#aa00ff80,transparent); pointer-events:none; z-index:1; animation:np-scan 4s linear infinite; }
+      .biz-page { animation: np-flicker 8s steps(1) infinite; }
+    `,
+    // 🤖 Cyber: yellow scanlines + teal/red corner glow + glitch
+    cyber: `
+      @keyframes cy-scan  { 0%{transform:translateY(-100vh)} 100%{transform:translateY(100vh)} }
+      @keyframes cy-glitch { 0%,94%,100%{clip-path:none;transform:none} 95%{clip-path:inset(30% 0 40% 0);transform:translateX(6px)} 96%{clip-path:inset(60% 0 10% 0);transform:translateX(-4px)} 97%{clip-path:inset(10% 0 70% 0);transform:translateX(3px)} 98%{clip-path:none;transform:none} }
+      .biz-page-anim-scan  { position:fixed; inset:0; pointer-events:none; z-index:0; background:repeating-linear-gradient(0deg,transparent,transparent 3px,#ffee0006 3px,#ffee0006 4px); animation:cy-scan 12s linear infinite; }
+      .biz-page-anim-blob1 { position:fixed; bottom:-10%; right:-10%; width:40vw; height:40vw; border-radius:50%; background:#ffee00; opacity:0.12; pointer-events:none; z-index:0; filter:blur(80px); }
+      .biz-page-anim-blob2 { position:fixed; top:-10%; left:-10%; width:40vw; height:40vw; border-radius:50%; background:#00aaff; opacity:0.10; pointer-events:none; z-index:0; filter:blur(80px); }
+      .biz-page { animation: cy-glitch 12s steps(1) infinite; }
+    `,
+    // 🌈 Rainbow Flow: rotating conic gradient blobs
+    rainbow: `
+      @keyframes rb-spin   { 0%{transform:rotate(0deg) scale(1.8)} 100%{transform:rotate(360deg) scale(1.8)} }
+      @keyframes rb-spin2  { 0%{transform:rotate(180deg) scale(1.5)} 100%{transform:rotate(540deg) scale(1.5)} }
+      @keyframes rb-pulse  { 0%,100%{opacity:0.25} 50%{opacity:0.40} }
+      .biz-page-anim-blob1 { position:fixed; top:50%; left:50%; width:100vw; height:100vw; margin:-50vw 0 0 -50vw; border-radius:50%; background:conic-gradient(#f97316,#eab308,#22c55e,#06b6d4,#6366f1,#ec4899,#f97316); opacity:0.25; pointer-events:none; z-index:0; animation:rb-spin 10s linear infinite, rb-pulse 5s ease-in-out infinite; filter:blur(60px); }
+      .biz-page-anim-blob2 { position:fixed; top:50%; left:50%; width:80vw; height:80vw; margin:-40vw 0 0 -40vw; border-radius:50%; background:conic-gradient(#ec4899,#6366f1,#06b6d4,#22c55e,#eab308,#f97316,#ec4899); opacity:0.15; pointer-events:none; z-index:0; animation:rb-spin2 14s linear infinite; filter:blur(80px); }
+    `,
+  }
+
+  el.textContent = css[animationKey] ?? ''
+  document.head.appendChild(el)
+
+  // Inject real DOM blob elements (can't do multiple animated layers with ::before alone)
+  document.getElementById('bisne-animated-blobs')?.remove()
+  const blobContainer = document.createElement('div')
+  blobContainer.id = 'bisne-animated-blobs'
+
+  const classMap: Record<string, string[]> = {
+    gamer:       ['biz-page-anim-blob1','biz-page-anim-blob2','biz-page-anim-blob3'],
+    aurora:      ['biz-page-anim-blob1','biz-page-anim-blob2','biz-page-anim-blob3'],
+    'neon-pulse':['biz-page-anim-blob1','biz-page-anim-blob2','biz-page-anim-scan'],
+    cyber:       ['biz-page-anim-scan','biz-page-anim-blob1','biz-page-anim-blob2'],
+    rainbow:     ['biz-page-anim-blob1','biz-page-anim-blob2'],
+  }
+
+  ;(classMap[animationKey] ?? []).forEach(cls => {
+    const div = document.createElement('div')
+    div.className = cls
+    blobContainer.appendChild(div)
+  })
+
+  document.body.appendChild(blobContainer)
+}
+
+export function removeAnimatedThemeCSS() {
+  if (typeof document === 'undefined') return
+  document.getElementById('bisne-animated-theme')?.remove()
+  document.getElementById('bisne-animated-blobs')?.remove()
 }

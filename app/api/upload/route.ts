@@ -5,8 +5,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriver } from '@/lib/storage'
 
-function isAuth(req: NextRequest) {
-  return req.cookies.get('admin_session')?.value === 'authenticated'
+function isAuth(req: NextRequest): boolean {
+  if (req.cookies.get('admin_session')?.value === 'authenticated') return true
+  // Allow any biz-session owner to upload images
+  const allCookies = req.cookies.getAll()
+  return allCookies.some(c => c.name.startsWith('biz_session_') && c.value === 'authenticated')
 }
 
 const ALLOWED_TYPES: Record<string, string> = {

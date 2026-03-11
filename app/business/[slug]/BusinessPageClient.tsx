@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Business, BusinessDetail, Product, Lang, WEEKDAYS } from "@/types";
 import { buildProductIndexes, getL } from "@/lib/data";
 import { applyPalette, removePalette } from "@/lib/palette";
-import { isOpenNow, DAY_NAMES_ES, DAY_NAMES_EN } from "@/lib/schedule";
+import { getScheduleStatus, DAY_NAMES_ES, DAY_NAMES_EN } from "@/lib/schedule";
 import { useCart } from "@/hooks/useCart";
 import { useLang } from "@/hooks/useLang";
 import { ProductCard } from "@/components/product/ProductCard";
@@ -11,7 +11,7 @@ import { CategoryFilter } from "@/components/product/CategoryFilter";
 import { CartButton } from "@/components/cart/CartButton";
 import { CartSheet } from "@/components/cart/CartSheet";
 import { LangToggle } from "@/components/ui/LangToggle";
-import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // ─── Default emoji ─────────────────────────────────────────────────────────────
 function getDefaultEmoji(slug: string, name?: string): string {
@@ -399,6 +399,8 @@ interface Props {
   detail: BusinessDetail;
   products: Product[];
   slug: string;
+  isPreview?: boolean;
+  appConfig?: any;
 }
 
 export function BusinessPageClient({
@@ -406,6 +408,8 @@ export function BusinessPageClient({
   detail,
   products,
   slug,
+  isPreview = false,
+  appConfig,
 }: Props) {
   const [lang, setLang] = useLang();
   const indexes = buildProductIndexes(products, "es");
@@ -425,13 +429,40 @@ export function BusinessPageClient({
   const [cartOpen, setCartOpen] = useState(false);
   const [showDonation, setShowDonation] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [productSearch, setProductSearch] = useState("");
+  const [showProductSearch, setShowProductSearch] = useState(false);
+  const [shared, setShared] = useState(false);
+  const [coverIdx, setCoverIdx] = useState(0);
+  // Preview auth gate
+  const [previewAuthed, setPreviewAuthed] = useState(false);
+  const [previewPwd, setPreviewPwd] = useState("");
+  const [previewError, setPreviewError] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlPromoCode = searchParams?.get("code") ?? undefined;
 
   // Apply business palette
   useEffect(() => {
     applyPalette(detail.palette);
     return () => removePalette();
   }, [detail.palette]);
+
+  // Cover slideshow for premium businesses
+  const coverImages = (business.coverImages ?? []).filter(Boolean);
+  const allCovers = [business.image, ...coverImages].filter(
+    Boolean,
+  ) as string[];
+  useEffect(() => {
+    if (allCovers.length <= 1) return;
+    const t = setInterval(
+      () => setCoverIdx((i) => (i + 1) % allCovers.length),
+      4000,
+    );
+    return () => clearInterval(t);
+  }, [allCovers.length]);
 
   // Track scroll for header
   useEffect(() => {
@@ -449,24 +480,21 @@ export function BusinessPageClient({
   const textMuted = palette?.textMuted ?? "#888";
   const border = palette?.border ?? "#2e2e2e";
 
-  const isOpen = isOpenNow(detail.schedule);
+  const schedStatus = getScheduleStatus(detail.schedule, lang);
+  const isOpen = schedStatus.isOpen;
   const emoji = getDefaultEmoji(slug, business.name?.es);
 
-  // Today's schedule line
-  const todayLine = (() => {
-    if (!detail.schedule) return "";
-    if (detail.schedule.alwaysOpen)
-      return lang === "es" ? "24/7 Siempre abierto" : "24/7 Always open";
-    const jsDay = new Date().getDay();
-    const dayIndex = jsDay === 0 ? 6 : jsDay - 1;
-    const dayKey = WEEKDAYS[dayIndex];
-    const ds = detail.schedule.days?.[dayKey];
-    const dayName = (lang === "es" ? DAY_NAMES_ES : DAY_NAMES_EN)[dayKey];
-    if (!ds || ds.closed)
-      return `${dayName}: ${lang === "es" ? "Cerrado" : "Closed"}`;
-    if (ds.h24) return `${dayName}: 24h`;
-    return `${dayName}: ${ds.open}–${ds.close}`;
-  })();
+  // Status colors: green=open, red=closed, orange=unavailable
+  const statusColor = business.unavailable
+    ? "#f97316"
+    : isOpen
+      ? "#22c55e"
+      : "#ef4444";
+  const statusLabel = business.unavailable
+    ? lang === "es"
+      ? "No disponible"
+      : "Unavailable"
+    : schedStatus.label;
 
   const catLang = indexes.allCategories.map((catEs) => {
     const prod = products.find((p) => p.category.es === catEs);
@@ -480,7 +508,31 @@ export function BusinessPageClient({
     filtered = filtered.filter(
       (p) => getL(p.category, lang) === selectedCategory,
     );
+  if (productSearch.trim()) {
+    const q = productSearch.toLowerCase();
+    filtered = filtered.filter(
+      (p) =>
+        getL(p.name, lang).toLowerCase().includes(q) ||
+        getL(p.description, lang).toLowerCase().includes(q) ||
+        getL(p.category, lang).toLowerCase().includes(q),
+    );
+  }
   const cartMap = new Map(items.map((i) => [i.productId, i.quantity]));
+
+  // Share handler
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = getL(business.name, lang);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+        return;
+      } catch {}
+    }
+    await navigator.clipboard.writeText(url);
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
+  };
   const hasLogo = !!business.logo;
   const hasCover = !!business.image;
   const location = [detail.municipality, detail.province]
@@ -493,8 +545,95 @@ export function BusinessPageClient({
   const headerBlur = `blur(${Math.round(headerProgress * 16)}px)`;
   const headerBorder = headerProgress > 0.5 ? border : "transparent";
 
+  // Preview auth gate: show password prompt if not yet authed
+  const handlePreviewLogin = async () => {
+    setPreviewLoading(true);
+    setPreviewError("");
+    const res = await fetch("/api/biz-auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug, password: previewPwd }),
+    });
+    if (res.ok) {
+      setPreviewAuthed(true);
+    } else {
+      setPreviewError(
+        lang === "es" ? "Contraseña incorrecta" : "Wrong password",
+      );
+    }
+    setPreviewLoading(false);
+  };
+
+  if (isPreview && !previewAuthed) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center px-4"
+        style={{ background: bg }}
+      >
+        <div
+          className="w-full max-w-sm rounded-3xl p-8 space-y-5 border"
+          style={{ background: surface, borderColor: border }}
+        >
+          <div className="text-center">
+            <div className="text-5xl mb-3">👁️</div>
+            <h1 className="text-xl font-black" style={{ color: text }}>
+              {lang === "es" ? "Vista previa privada" : "Private preview"}
+            </h1>
+            <p className="text-xs mt-1" style={{ color: textMuted }}>
+              {lang === "es"
+                ? "Este negocio está pendiente de aprobación. Ingresa tu contraseña para ver la vista previa."
+                : "This business is pending approval. Enter your password to preview."}
+            </p>
+          </div>
+          <div className="space-y-3">
+            <input
+              type="password"
+              value={previewPwd}
+              onChange={(e) => setPreviewPwd(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handlePreviewLogin()}
+              placeholder={lang === "es" ? "Tu contraseña" : "Your password"}
+              className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
+              style={{ background: surface2, borderColor: border, color: text }}
+            />
+            {previewError && (
+              <p className="text-xs text-red-400 text-center">{previewError}</p>
+            )}
+            <button
+              onClick={handlePreviewLogin}
+              disabled={previewLoading || !previewPwd}
+              className="w-full py-3 rounded-xl font-black text-sm transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+              style={{ background: accent, color: "white" }}
+            >
+              {previewLoading
+                ? "⏳…"
+                : lang === "es"
+                  ? "Ver mi negocio →"
+                  : "Preview →"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="biz-page" style={{ background: bg, color: text }}>
+      {/* ── Preview banner ── */}
+      {isPreview && (
+        <div
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-2xl shadow-2xl border text-sm font-bold"
+          style={{
+            background: "#eab308",
+            color: "#1a1400",
+            borderColor: "#ca9a00",
+          }}
+        >
+          👁️{" "}
+          {lang === "es"
+            ? "Vista previa — pendiente de aprobación"
+            : "Preview — pending approval"}
+        </div>
+      )}
       {/* ── Sticky header ── */}
       <header
         className="fixed top-0 left-0 right-0 z-40 transition-all duration-200"
@@ -505,45 +644,234 @@ export function BusinessPageClient({
           borderBottom: `1px solid ${headerBorder}`,
         }}
       >
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Link
-            href="/"
-            className="w-9 h-9 flex items-center justify-center rounded-xl transition-all text-sm font-bold flex-shrink-0"
-            style={{
-              background: headerProgress < 0.5 ? "rgba(0,0,0,0.4)" : surface2,
-              color: headerProgress < 0.5 ? "#fff" : textMuted,
-            }}
-          >
-            ←
-          </Link>
-          <div
-            className="flex-1 min-w-0 overflow-hidden"
-            style={{
-              opacity: headerProgress,
-              transform: `translateY(${(1 - headerProgress) * 6}px)`,
-              transition: "all 0.2s",
-            }}
-          >
-            <span
-              className="block font-bold text-sm truncate"
-              style={{ fontFamily: "var(--font-display)", color: text }}
+        <div className="max-w-5xl mx-auto px-3 flex flex-col">
+          <div className="h-14 flex items-center gap-2">
+            {/* iOS-style back button */}
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-1 pl-0 pr-3 py-2 rounded-xl transition-all active:scale-95 flex-shrink-0"
+              style={{ color: accent }}
             >
-              {getL(business.name, lang)}
-            </span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                className="w-5 h-5"
+              >
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              <span className="text-sm font-semibold hidden sm:block">
+                {lang === "es" ? "Atrás" : "Back"}
+              </span>
+            </button>
+
+            {/* Logo + name (appear on scroll) */}
+            <div
+              className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden"
+              style={{
+                opacity: headerProgress,
+                transform: `translateY(${(1 - headerProgress) * 6}px)`,
+                transition: "all 0.2s",
+              }}
+            >
+              {/* Logo pill */}
+              <div
+                className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center border"
+                style={{
+                  background: hasLogo ? surface2 : accent,
+                  borderColor: border,
+                }}
+              >
+                {hasLogo ? (
+                  <img
+                    src={business.logo!}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-sm">{emoji}</span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p
+                  className="font-bold text-sm leading-tight truncate"
+                  style={{ fontFamily: "var(--font-display)", color: text }}
+                >
+                  {getL(business.name, lang)}
+                </p>
+                <p
+                  className="text-[10px] font-semibold leading-none truncate"
+                  style={{ color: statusColor }}
+                >
+                  {statusLabel}
+                </p>
+              </div>
+            </div>
+
+            {/* Right actions */}
+            <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+              {/* Product search toggle */}
+              <button
+                onClick={() => {
+                  setShowProductSearch(!showProductSearch);
+                  if (showProductSearch) setProductSearch("");
+                }}
+                className="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-95"
+                style={{
+                  background: showProductSearch
+                    ? accent
+                    : headerProgress > 0.5
+                      ? surface2
+                      : "rgba(0,0,0,0.4)",
+                  color: showProductSearch
+                    ? "white"
+                    : headerProgress > 0.5
+                      ? textMuted
+                      : "#fff",
+                }}
+                title={lang === "es" ? "Buscar producto" : "Search product"}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  className="w-4 h-4"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+              </button>
+              {/* Share */}
+              <button
+                onClick={handleShare}
+                className="w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-95"
+                style={{
+                  background: shared
+                    ? "#22c55e"
+                    : headerProgress > 0.5
+                      ? surface2
+                      : "rgba(0,0,0,0.4)",
+                  color: shared
+                    ? "white"
+                    : headerProgress > 0.5
+                      ? textMuted
+                      : "#fff",
+                }}
+                title={lang === "es" ? "Compartir" : "Share"}
+              >
+                {shared ? (
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    className="w-4 h-4"
+                  >
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                ) : (
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    className="w-4 h-4"
+                  >
+                    <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                  </svg>
+                )}
+              </button>
+              <LangToggle lang={lang} setLang={setLang} />
+            </div>
           </div>
-          <LangToggle lang={lang} setLang={setLang} />
+
+          {/* Product search bar — expands below header */}
+          {showProductSearch && (
+            <div className="pb-2 px-1">
+              <div className="relative">
+                <span
+                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: textMuted }}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    className="w-4 h-4"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                  </svg>
+                </span>
+                <input
+                  autoFocus
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  placeholder={
+                    lang === "es" ? "Buscar producto…" : "Search product…"
+                  }
+                  className="w-full pl-9 pr-4 py-2 rounded-xl text-sm outline-none border"
+                  style={{
+                    background: surface2,
+                    borderColor: border,
+                    color: text,
+                  }}
+                />
+                {productSearch && (
+                  <button
+                    onClick={() => setProductSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs"
+                    style={{ color: textMuted }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
       {/* ── Cover hero ── */}
       <div className="relative" style={{ background: bg }}>
         <div className="relative h-56 md:h-72 w-full overflow-hidden">
-          {hasCover ? (
-            <img
-              src={business.image!}
-              alt=""
-              className="w-full h-full object-cover"
-            />
+          {allCovers.length > 0 ? (
+            <>
+              {allCovers.map((img, i) => (
+                <img
+                  key={i}
+                  src={img}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+                  style={{ opacity: i === coverIdx ? 1 : 0 }}
+                />
+              ))}
+              {/* Slideshow dots */}
+              {allCovers.length > 1 && (
+                <div className="absolute bottom-12 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
+                  {allCovers.map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full transition-all duration-300"
+                      style={{
+                        background:
+                          i === coverIdx ? "white" : "rgba(255,255,255,0.4)",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
             <div
               className="w-full h-full relative"
@@ -627,6 +955,7 @@ export function BusinessPageClient({
             </div>
 
             <div className="flex-1 min-w-0 pb-1">
+              {/* Name + status badge inline */}
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <h1
                   className="text-2xl md:text-3xl font-black leading-tight"
@@ -634,38 +963,71 @@ export function BusinessPageClient({
                 >
                   {getL(business.name, lang)}
                 </h1>
-                <div
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
+                {/* Status badge — only as wide as its text */}
+                <span
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
                   style={{
-                    background: isOpen ? `${accent}22` : "rgba(80,80,80,0.2)",
-                    color: isOpen ? accent : "#888",
-                    border: `1px solid ${isOpen ? accent + "44" : "rgba(120,120,120,0.25)"}`,
+                    background: statusColor + "18",
+                    color: statusColor,
+                    border: `1px solid ${statusColor}40`,
                   }}
                 >
                   <span
-                    className="w-1.5 h-1.5 rounded-full"
+                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                     style={{
-                      background: isOpen ? accent : "#888",
-                      boxShadow: isOpen ? `0 0 6px ${accent}` : "",
+                      background: statusColor,
+                      boxShadow: `0 0 6px ${statusColor}`,
                     }}
                   />
-                  {isOpen
+                  {business.unavailable
                     ? lang === "es"
-                      ? "Abierto"
-                      : "Open"
-                    : lang === "es"
-                      ? "Cerrado"
-                      : "Closed"}
-                </div>
+                      ? "No disponible"
+                      : "Unavailable"
+                    : isOpen
+                      ? lang === "es"
+                        ? "Abierto"
+                        : "Open"
+                      : lang === "es"
+                        ? "Cerrado"
+                        : "Closed"}
+                </span>
               </div>
+              {business.slogan && (
+                <p
+                  className="text-xs font-semibold mb-0.5"
+                  style={{ color: accent }}
+                >
+                  {getL(business.slogan, lang)}
+                </p>
+              )}
               {business.description && (
                 <p
-                  className="text-sm line-clamp-2"
+                  className="text-sm line-clamp-2 mb-1"
                   style={{ color: textMuted }}
                 >
                   {getL(business.description, lang)}
                 </p>
               )}
+              {/* Schedule label below description */}
+              {!business.unavailable &&
+                schedStatus.label &&
+                schedStatus.label !== "24/7" && (
+                  <p
+                    className="text-xs font-semibold"
+                    style={{ color: statusColor }}
+                  >
+                    🕐 {schedStatus.label}{" "}
+                    {!detail.schedule?.alwaysOpen && (
+                      <button
+                        onClick={() => setShowSchedule(true)}
+                        className="font-bold underline-offset-2 hover:underline text-xs ml-0.5 flex-shrink-0"
+                        style={{ color: accent }}
+                      >
+                        {lang === "es" ? "ver más" : "more"}
+                      </button>
+                    )}
+                  </p>
+                )}
             </div>
           </div>
 
@@ -695,18 +1057,19 @@ export function BusinessPageClient({
                 🏠 {getL(detail.address, lang)}
               </span>
             )}
-            {/* Today schedule + "ver más" */}
-            {todayLine && (
+            {/* Schedule chip */}
+            {/* {detail.schedule && (
               <div
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border"
                 style={{
-                  borderColor: border,
-                  color: textMuted,
-                  background: surface,
+                  borderColor: statusColor + "40",
+                  color: statusColor,
+                  background: statusColor + "10",
                 }}
               >
-                <span>🕐 {todayLine}</span>
-                {!detail.schedule?.alwaysOpen && detail.schedule && (
+                <span>🕐</span>
+                <span className="text-xs">{schedStatus.label}</span>
+                {!detail.schedule?.alwaysOpen && (
                   <button
                     onClick={() => setShowSchedule(true)}
                     className="font-bold underline-offset-2 hover:underline text-xs ml-0.5 flex-shrink-0"
@@ -716,7 +1079,7 @@ export function BusinessPageClient({
                   </button>
                 )}
               </div>
-            )}
+            )} */}
             {detail.phone && (
               <a
                 href={`tel:+${detail.phone}`}
@@ -859,7 +1222,17 @@ export function BusinessPageClient({
                 lang={lang}
                 onAdd={add}
                 inCart={cartMap.has(product.id)}
-                quantity={cartMap.get(product.id)}
+                quantity={cartMap.get(product.id) as number | undefined}
+                accent={accent}
+                bg={bg}
+                surface={surface}
+                surface2={surface2}
+                text={text}
+                textMuted={textMuted}
+                border={border}
+                priceColor={palette?.priceColor ?? "#fbbf24"}
+                defaultEmoji={appConfig?.defaultProductEmoji}
+                defaultImage={appConfig?.defaultProductImage}
               />
             ))}
         </div>
@@ -871,6 +1244,17 @@ export function BusinessPageClient({
             </p>
           </div>
         )}
+
+        {/* Report button */}
+        <div className="flex justify-center pb-8 pt-4">
+          <button
+            onClick={() => setShowReport(true)}
+            className="text-xs opacity-30 hover:opacity-60 transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+            style={{ color: textMuted }}
+          >
+            🚩 {lang === "es" ? "Reportar negocio" : "Report business"}
+          </button>
+        </div>
       </main>
 
       {mounted && (
@@ -928,6 +1312,8 @@ export function BusinessPageClient({
               onClear={clear}
               onClose={() => setCartOpen(false)}
               donationsEnabled={detail.donationsEnabled ?? false}
+              promoCodes={detail.promoCodes ?? []}
+              initialPromoCode={urlPromoCode}
             />
           </div>
         </div>
@@ -947,6 +1333,206 @@ export function BusinessPageClient({
           onClose={() => setShowSchedule(false)}
         />
       )}
+      {/* ── Report modal ── */}
+      {showReport && (
+        <ReportModal
+          slug={slug}
+          lang={lang}
+          bg={bg}
+          surface={surface}
+          border={border}
+          text={text}
+          textMuted={textMuted}
+          accent={accent}
+          onClose={() => setShowReport(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Report Modal ─────────────────────────────────────────────────────────────
+function ReportModal({
+  slug,
+  lang,
+  bg,
+  surface,
+  border,
+  text,
+  textMuted,
+  accent,
+  onClose,
+}: {
+  slug: string;
+  lang: string;
+  bg: string;
+  surface: string;
+  border: string;
+  text: string;
+  textMuted: string;
+  accent: string;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [reason, setReason] = useState("spam");
+  const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const REASONS = [
+    {
+      value: "spam",
+      label: lang === "es" ? "Spam o publicidad falsa" : "Spam or fake ads",
+    },
+    {
+      value: "fraud",
+      label: lang === "es" ? "Fraude o estafa" : "Fraud or scam",
+    },
+    {
+      value: "offensive",
+      label: lang === "es" ? "Contenido ofensivo" : "Offensive content",
+    },
+    {
+      value: "closed",
+      label:
+        lang === "es" ? "Negocio cerrado/inexistente" : "Closed / non-existent",
+    },
+    { value: "other", label: lang === "es" ? "Otro" : "Other" },
+  ];
+
+  const handleSubmit = async () => {
+    if (!name.trim()) return;
+    setLoading(true);
+    await fetch("/api/reports", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug, name, email, reason, description }),
+    });
+    setLoading(false);
+    setDone(true);
+  };
+
+  const inputStyle = { background: bg, borderColor: border, color: text };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div
+        className="relative w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl p-6 space-y-4 animate-slide-up"
+        style={{ background: surface, border: `1px solid ${border}` }}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="font-black text-lg" style={{ color: text }}>
+            🚩 {lang === "es" ? "Reportar negocio" : "Report business"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center"
+            style={{ background: bg, color: textMuted }}
+          >
+            ✕
+          </button>
+        </div>
+        {done ? (
+          <div className="text-center py-6">
+            <div className="text-4xl mb-2">✅</div>
+            <p className="font-bold" style={{ color: text }}>
+              {lang === "es" ? "¡Reporte enviado!" : "Report sent!"}
+            </p>
+            <p className="text-sm mt-1" style={{ color: textMuted }}>
+              {lang === "es"
+                ? "Lo revisaremos pronto."
+                : "We will review it shortly."}
+            </p>
+            <button
+              onClick={onClose}
+              className="mt-4 px-6 py-2 rounded-xl text-sm font-bold"
+              style={{ background: accent, color: "white" }}
+            >
+              {lang === "es" ? "Cerrar" : "Close"}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs opacity-50 block mb-0.5">
+                {lang === "es" ? "Tu nombre *" : "Your name *"}
+              </label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={lang === "es" ? "Nombre" : "Name"}
+                className="w-full px-3 py-2 rounded-xl border text-sm outline-none"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label className="text-xs opacity-50 block mb-0.5">
+                {lang === "es"
+                  ? "Email o contacto (opcional)"
+                  : "Email or contact (optional)"}
+              </label>
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@ejemplo.com"
+                className="w-full px-3 py-2 rounded-xl border text-sm outline-none"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label className="text-xs opacity-50 block mb-0.5">
+                {lang === "es" ? "Motivo *" : "Reason *"}
+              </label>
+              <select
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border text-sm outline-none"
+                style={inputStyle}
+              >
+                {REASONS.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs opacity-50 block mb-0.5">
+                {lang === "es" ? "Descripción" : "Description"}
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value.slice(0, 300))}
+                rows={3}
+                placeholder={
+                  lang === "es"
+                    ? "Cuéntanos qué ocurrió…"
+                    : "Tell us what happened…"
+                }
+                className="w-full px-3 py-2 rounded-xl border text-sm outline-none resize-none"
+                style={inputStyle}
+              />
+            </div>
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !name.trim()}
+              className="w-full py-3 rounded-xl font-black text-sm transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+              style={{ background: accent, color: "white" }}
+            >
+              {loading
+                ? "⏳…"
+                : lang === "es"
+                  ? "Enviar reporte"
+                  : "Send report"}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

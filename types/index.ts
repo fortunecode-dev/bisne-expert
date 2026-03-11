@@ -38,8 +38,12 @@ export function makeDefaultSchedule(): StructuredSchedule {
 }
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
+export type PaletteTier = 'standard' | 'sponsored' | 'premium'
 export type BusinessPalette = {
   name?: string
+  tier?: PaletteTier       // 'standard' | 'sponsored' | 'premium'
+  animated?: boolean       // animated themes (premium only)
+  animationKey?: string    // e.g. 'gamer' | 'aurora' | 'neon-pulse' | 'cyber' | 'rainbow'
   accent: string; accentText: string; accentSoft: string
   bg: string; surface: string; surface2: string
   border: string; text: string; textMuted: string; priceColor: string
@@ -60,25 +64,66 @@ export type DeveloperConfig = {
   telegram?: string
   website?: string
 }
+export type MarqueeConfigItem = {
+  slug: string
+  promoType: PromoType
+  active?: boolean
+  label?: LocalizedString
+}
+
 export type AppConfig = {
   homePalette?: BusinessPalette
   customPalettes?: { name: string; palette: BusinessPalette }[]
   developer?: DeveloperConfig
+  marqueeItems?: MarqueeConfigItem[]
+  defaultProductEmoji?: string      // e.g. '🛍️' — shown when product has no image
+  defaultProductImage?: string      // URL — shown when product has no image
 }
 
 // ─── Business ────────────────────────────────────────────────────────────────
+export type BusinessStatus = 'open' | 'closed' | 'unavailable'
+
 export type Business = {
   id: number
   slug: string           // REQUIRED
   name: LocalizedString  // REQUIRED
   description?: LocalizedString
+  slogan?: LocalizedString
   logo?: string
   image?: string
+  coverImages?: string[]
   hidden?: boolean
   sponsored?: boolean
+  premium?: boolean
+  unavailable?: boolean
   categories?: string[]
-  category?: string      // for filtering on home
+  category?: string
   seo?: SeoMeta
+  created_at?: string             // ISO timestamp when registered
+  // Business owner auth
+  ownerPasswordHash?: string
+  ownerCode?: string
+}
+
+// ─── Promo codes (Premium) ───────────────────────────────────────────────────
+export type PromoCode = {
+  id: string             // e.g. "PROMO10"
+  discount: number       // e.g. 10 for 10%
+  type: 'percent' | 'fixed'
+  active: boolean
+  expiresAt?: string     // ISO date string
+}
+
+// ─── Reports ────────────────────────────────────────────────────────────────
+export type BusinessReport = {
+  id: string
+  slug: string
+  name: string
+  email: string
+  reason: string
+  description: string
+  created_at: string
+  reviewed?: boolean
 }
 export type BusinessesData = { businesses: Business[] }
 
@@ -97,6 +142,17 @@ export type BusinessDetail = {
   currency?: string
   palette?: BusinessPalette
   seo?: SeoMeta
+  promoCodes?: PromoCode[]        // Premium: promotional codes
+}
+
+// ─── Promotions ──────────────────────────────────────────────────────────────
+export type PromoType = 'standard' | 'sale' | 'new' | 'special' | 'limited'
+export type PromoItem = {
+  slug: string           // business slug
+  productId?: number     // if promoting a specific product (null = whole business)
+  promoType: PromoType
+  label?: LocalizedString // custom label override
+  active: boolean
 }
 
 // ─── Product ─────────────────────────────────────────────────────────────────
@@ -108,6 +164,7 @@ export type Product = {
   price: number
   originalPrice?: number
   image: string
+  images?: string[]
   imageKeywords: string[]
   category: LocalizedString
   featured: boolean
@@ -115,6 +172,7 @@ export type Product = {
   tags?: ProductTag[]
   position?: number
   available?: boolean
+  promote?: PromoType | 'NO'    // 'NO' | 'standard' | 'sale' | 'new' | 'special' | 'limited'
   seo: SeoMeta
 }
 export type ProductsData = { products: Product[] }

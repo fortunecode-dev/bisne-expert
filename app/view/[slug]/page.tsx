@@ -39,7 +39,7 @@ export default async function ViewPage({ params }: { params: { slug: string } })
 
   return (
     <Suspense fallback={<div className="p-8 text-center" style={{ color: 'var(--color-text)' }}>Cargando…</div>}>
-      <ViewPageClient business={business} detail={detail} products={visibleProducts} slug={params.slug} />
+      <ViewPageClient business={business!} detail={detail} products={visibleProducts} slug={params.slug} />
     </Suspense>
   )
 }
