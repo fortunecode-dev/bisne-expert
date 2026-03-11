@@ -72,7 +72,7 @@ export function BusinessCard({ business, detail, lang }: Props) {
 
   return (
     <Link
-      href={`/business/${business.slug}`}
+      href={`/${business.slug}`}
       className="group block rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl"
       style={{
         background: surface,
