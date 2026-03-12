@@ -1,9 +1,11 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { BusinessEditor } from '@/components/business/BusinessEditor'
 import Link from 'next/link'
 
 export default function RegistrarPage() {
+  const router = useRouter()
   const [done, setDone] = useState<{ slug: string; code: string } | null>(null)
 
   const handleSave = async ({ business, detail, products, password }: any) => {
@@ -70,6 +72,8 @@ export default function RegistrarPage() {
     }
 
     setDone({ slug, code })
+    // Redirect to preview after short delay so user sees the success screen
+    setTimeout(() => router.push(`/${slug}?preview=1`), 2000)
   }
 
   if (done) {

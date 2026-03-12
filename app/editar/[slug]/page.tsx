@@ -17,6 +17,13 @@ export default function EditarPage() {
   const [initial, setInitial] = useState<any>(null)
   const [saved, setSaved] = useState(false)
   const [showPwd, setShowPwd] = useState(false)
+  const [showReset, setShowReset] = useState(false)
+  const [resetPwd, setResetPwd] = useState('')
+  const [resetConfirm, setResetConfirm] = useState('')
+  const [resetPwdVisible, setResetPwdVisible] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetError, setResetError] = useState('')
+  const [resetDone, setResetDone] = useState(false)
 
   useEffect(() => {
     fetch(`/api/biz-session?slug=${slug}`)
@@ -77,6 +84,29 @@ export default function EditarPage() {
     setSaved(true); setTimeout(() => setSaved(false), 2500)
   }
 
+  const handleResetPassword = async () => {
+    if (!resetPwd || resetPwd.length < 6) { setResetError('Mínimo 6 caracteres'); return }
+    if (resetPwd !== resetConfirm) { setResetError('Las contraseñas no coinciden'); return }
+    setResetLoading(true); setResetError('')
+    try {
+      const hashRes = await fetch('/api/biz-auth/hash', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, password: resetPwd }),
+      })
+      const { hash, code } = await hashRes.json()
+      // Update businesses.json
+      const bizListRes = await fetch('/api/data?file=businesses').then(r => r.json())
+      const list: any[] = bizListRes?.businesses ?? []
+      await fetch('/api/data', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file: 'businesses', data: { businesses: list.map(b => b.slug === slug ? { ...b, ownerPasswordHash: hash, ownerCode: code } : b) } }),
+      })
+      setResetDone(true)
+      setTimeout(() => { setShowReset(false); setResetDone(false); setResetPwd(''); setResetConfirm('') }, 2500)
+    } catch { setResetError('Error al actualizar la contraseña') }
+    setResetLoading(false)
+  }
+
   if (authed === null) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-bg)' }}>
       <div className="text-3xl animate-spin">⏳</div>
@@ -133,6 +163,7 @@ export default function EditarPage() {
   )
 
   return (
+    <>
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
       <header className="sticky top-0 z-30 border-b px-4 h-14 flex items-center gap-3 justify-between"
         style={{ background: 'var(--color-bg)', borderColor: 'var(--color-border)' }}>
@@ -155,7 +186,7 @@ export default function EditarPage() {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {saved && <span className="text-xs font-bold" style={{ color: '#22c55e' }}>✓ Guardado</span>}
-          <Link href={`/${slug}`} target="_blank"
+          <Link href={`/${slug}?preview=1`} target="_blank"
             className="text-xs px-3 py-1.5 rounded-xl border font-semibold hover:opacity-80 transition-all"
             style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }}>
             👁️ Ver
@@ -163,8 +194,58 @@ export default function EditarPage() {
         </div>
       </header>
       <div className="flex-1 max-w-3xl mx-auto w-full">
-        <BusinessEditor slug={slug} initial={initial} isAdmin={isAdmin} onSave={handleSave} />
+        <BusinessEditor slug={slug} initial={initial} isAdmin={isAdmin} onSave={handleSave} onResetPassword={() => setShowReset(true)} />
       </div>
     </div>
+
+      {/* Reset password modal */}
+      {showReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-3xl p-6 space-y-4 border"
+            style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+            <div className="flex items-center justify-between">
+              <p className="font-black text-lg" style={{ color: 'var(--color-text)' }}>🔑 Cambiar contraseña</p>
+              <button onClick={() => { setShowReset(false); setResetError(''); setResetPwd(''); setResetConfirm('') }}
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:opacity-70"
+                style={{ background: 'var(--color-surface-2)', color: 'var(--color-text-muted)' }}>✕</button>
+            </div>
+            {resetDone ? (
+              <div className="py-4 text-center">
+                <p className="text-4xl mb-2">✅</p>
+                <p className="font-bold text-sm" style={{ color: '#22c55e' }}>Contraseña actualizada</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-semibold opacity-60 block mb-1">Nueva contraseña</label>
+                  <div className="relative">
+                    <input type={resetPwdVisible ? 'text' : 'password'} value={resetPwd}
+                      onChange={e => setResetPwd(e.target.value)} placeholder="Mínimo 6 caracteres"
+                      className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none pr-10"
+                      style={{ background: 'var(--color-surface-2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
+                    <button onClick={() => setResetPwdVisible(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs opacity-50 hover:opacity-100">
+                      {resetPwdVisible ? '🙈' : '👁️'}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold opacity-60 block mb-1">Confirmar contraseña</label>
+                  <input type="password" value={resetConfirm} onChange={e => setResetConfirm(e.target.value)}
+                    placeholder="Repite la contraseña"
+                    className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
+                    style={{ background: 'var(--color-surface-2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
+                </div>
+                {resetError && <p className="text-xs font-semibold text-red-400">{resetError}</p>}
+                <button onClick={handleResetPassword} disabled={resetLoading || !resetPwd}
+                  className="w-full py-3 rounded-xl font-black text-sm transition-all hover:opacity-90 disabled:opacity-40"
+                  style={{ background: 'var(--color-accent)', color: 'white' }}>
+                  {resetLoading ? '⏳ Actualizando…' : '🔑 Actualizar contraseña'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   )
 }

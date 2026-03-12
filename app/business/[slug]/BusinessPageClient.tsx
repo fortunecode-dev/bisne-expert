@@ -1,6 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Business, BusinessDetail, Product, Lang, WEEKDAYS } from "@/types";
+import {
+  Business,
+  BusinessDetail,
+  Product,
+  Lang,
+  WEEKDAYS,
+  PaymentMethodDetail,
+} from "@/types";
 import { buildProductIndexes, getL } from "@/lib/data";
 import { applyPalette, removePalette } from "@/lib/palette";
 import { getScheduleStatus, DAY_NAMES_ES, DAY_NAMES_EN } from "@/lib/schedule";
@@ -96,6 +103,8 @@ const PM_ES: Record<string, string> = {
   card: "Tarjeta",
   crypto: "Criptomoneda",
   paypal: "PayPal",
+  zelle: "Zelle",
+  custom: "Otro",
 };
 const PM_EN: Record<string, string> = {
   cash: "Cash",
@@ -103,6 +112,8 @@ const PM_EN: Record<string, string> = {
   card: "Card",
   crypto: "Crypto",
   paypal: "PayPal",
+  zelle: "Zelle",
+  custom: "Other",
 };
 
 // ─── Schedule modal ───────────────────────────────────────────────────────────
@@ -400,6 +411,7 @@ interface Props {
   products: Product[];
   slug: string;
   isPreview?: boolean;
+  isOwner?: boolean;
   appConfig?: any;
 }
 
@@ -409,6 +421,7 @@ export function BusinessPageClient({
   products,
   slug,
   isPreview = false,
+  isOwner = false,
   appConfig,
 }: Props) {
   const [lang, setLang] = useLang();
@@ -438,8 +451,11 @@ export function BusinessPageClient({
   // Preview auth gate
   const [previewAuthed, setPreviewAuthed] = useState(false);
   const [previewPwd, setPreviewPwd] = useState("");
+  const [previewPwdVisible, setPreviewPwdVisible] = useState(false);
   const [previewError, setPreviewError] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
+  // Multiple addresses modal
+  const [showAddresses, setShowAddresses] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlPromoCode = searchParams?.get("code") ?? undefined;
@@ -546,6 +562,19 @@ export function BusinessPageClient({
   const headerBorder = headerProgress > 0.5 ? border : "transparent";
 
   // Preview auth gate: show password prompt if not yet authed
+  // Auto-auth if they have a valid token cookie (set after login)
+  useEffect(() => {
+    if (isPreview && !previewAuthed) {
+      // Check session via API (handles both cookie + token)
+      fetch(`/api/biz-session?slug=${slug}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.authed) setPreviewAuthed(true);
+        })
+        .catch(() => {});
+    }
+  }, [isPreview, slug]);
+
   const handlePreviewLogin = async () => {
     setPreviewLoading(true);
     setPreviewError("");
@@ -586,15 +615,29 @@ export function BusinessPageClient({
             </p>
           </div>
           <div className="space-y-3">
-            <input
-              type="password"
-              value={previewPwd}
-              onChange={(e) => setPreviewPwd(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handlePreviewLogin()}
-              placeholder={lang === "es" ? "Tu contraseña" : "Your password"}
-              className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
-              style={{ background: surface2, borderColor: border, color: text }}
-            />
+            <div className="relative">
+              <input
+                type={previewPwdVisible ? "text" : "password"}
+                value={previewPwd}
+                onChange={(e) => setPreviewPwd(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handlePreviewLogin()}
+                placeholder={lang === "es" ? "Tu contraseña" : "Your password"}
+                className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none pr-10"
+                style={{
+                  background: surface2,
+                  borderColor: border,
+                  color: text,
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setPreviewPwdVisible((p) => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs opacity-50 hover:opacity-100"
+                style={{ color: textMuted }}
+              >
+                {previewPwdVisible ? "🙈" : "👁️"}
+              </button>
+            </div>
             {previewError && (
               <p className="text-xs text-red-400 text-center">{previewError}</p>
             )}
@@ -618,20 +661,33 @@ export function BusinessPageClient({
 
   return (
     <div className="biz-page" style={{ background: bg, color: text }}>
-      {/* ── Preview banner ── */}
+      {/* ── Preview banner + Edit button ── */}
       {isPreview && (
-        <div
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-2xl shadow-2xl border text-sm font-bold"
-          style={{
-            background: "#eab308",
-            color: "#1a1400",
-            borderColor: "#ca9a00",
-          }}
-        >
-          👁️{" "}
-          {lang === "es"
-            ? "Vista previa — pendiente de aprobación"
-            : "Preview — pending approval"}
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2">
+          <div
+            className="flex items-center gap-3 px-4 py-2.5 rounded-2xl shadow-2xl border text-sm font-bold"
+            style={{
+              background: "#eab308",
+              color: "#1a1400",
+              borderColor: "#ca9a00",
+            }}
+          >
+            👁️{" "}
+            {lang === "es"
+              ? "Vista previa — pendiente de aprobación"
+              : "Preview — pending approval"}
+          </div>
+          <a
+            href={`/editar/${slug}`}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl shadow-2xl text-sm font-black transition-all hover:opacity-90 active:scale-95"
+            style={{
+              background: accent,
+              color: "white",
+              boxShadow: `0 8px 30px ${accent}60`,
+            }}
+          >
+            ✏️ {lang === "es" ? "Modificar negocio" : "Edit business"}
+          </a>
         </div>
       )}
       {/* ── Sticky header ── */}
@@ -695,12 +751,13 @@ export function BusinessPageClient({
                 )}
               </div>
               <div className="min-w-0">
-                <p
-                  className="font-bold text-sm leading-tight truncate"
+                <a
+                  href={`/${slug}`}
+                  className="font-bold text-sm leading-tight truncate block hover:opacity-80 transition-all"
                   style={{ fontFamily: "var(--font-display)", color: text }}
                 >
                   {getL(business.name, lang)}
-                </p>
+                </a>
                 <p
                   className="text-[10px] font-semibold leading-none truncate"
                   style={{ color: statusColor }}
@@ -963,34 +1020,6 @@ export function BusinessPageClient({
                 >
                   {getL(business.name, lang)}
                 </h1>
-                {/* Status badge — only as wide as its text */}
-                <span
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
-                  style={{
-                    background: statusColor + "18",
-                    color: statusColor,
-                    border: `1px solid ${statusColor}40`,
-                  }}
-                >
-                  <span
-                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{
-                      background: statusColor,
-                      boxShadow: `0 0 6px ${statusColor}`,
-                    }}
-                  />
-                  {business.unavailable
-                    ? lang === "es"
-                      ? "No disponible"
-                      : "Unavailable"
-                    : isOpen
-                      ? lang === "es"
-                        ? "Abierto"
-                        : "Open"
-                      : lang === "es"
-                        ? "Cerrado"
-                        : "Closed"}
-                </span>
               </div>
               {business.slogan && (
                 <p
@@ -1002,7 +1031,7 @@ export function BusinessPageClient({
               )}
               {business.description && (
                 <p
-                  className="text-sm line-clamp-2 mb-1"
+                  className="text-sm mb-1 whitespace-pre-line"
                   style={{ color: textMuted }}
                 >
                   {getL(business.description, lang)}
@@ -1045,18 +1074,35 @@ export function BusinessPageClient({
                 📍 {location}
               </span>
             )}
-            {detail.address && (
-              <span
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border"
-                style={{
-                  borderColor: border,
-                  color: textMuted,
-                  background: surface,
-                }}
-              >
-                🏠 {getL(detail.address, lang)}
-              </span>
-            )}
+            {(detail.addresses ?? (detail.address ? [detail.address] : []))
+              .length > 0 &&
+              (() => {
+                const addrs =
+                  detail.addresses ?? (detail.address ? [detail.address] : []);
+                const first = addrs[0];
+                const hasMore = addrs.length > 1;
+                return (
+                  <span
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border"
+                    style={{
+                      borderColor: border,
+                      color: textMuted,
+                      background: surface,
+                    }}
+                  >
+                    🏠 {getL(first, lang)}
+                    {hasMore && (
+                      <button
+                        onClick={() => setShowAddresses(true)}
+                        className="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full transition-all hover:opacity-80"
+                        style={{ background: accent + "20", color: accent }}
+                      >
+                        +{addrs.length - 1} {lang === "es" ? "más" : "more"}
+                      </button>
+                    )}
+                  </span>
+                );
+              })()}
             {/* Schedule chip */}
             {/* {detail.schedule && (
               <div
@@ -1095,35 +1141,6 @@ export function BusinessPageClient({
             )}
           </div>
 
-          {/* Payment methods — explicit text label, no card icon */}
-          {(detail.paymentMethods ?? []).length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              <span
-                className="text-xs font-semibold"
-                style={{ color: textMuted }}
-              >
-                {lang === "es" ? "Métodos de pago:" : "Payment methods:"}
-              </span>
-              {(detail.paymentMethods ?? []).map((pm) => {
-                const lbl =
-                  lang === "es" ? (PM_ES[pm] ?? pm) : (PM_EN[pm] ?? pm);
-                return (
-                  <span
-                    key={pm}
-                    className="text-xs px-2.5 py-1 rounded-full border"
-                    style={{
-                      borderColor: `${accent}30`,
-                      color: text,
-                      background: `${accent}12`,
-                    }}
-                  >
-                    {lbl}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-
           {/* Social links with brand icons */}
           {detail.socialLinks &&
             Object.entries(detail.socialLinks).some(([, v]) => !!v) && (
@@ -1160,6 +1177,100 @@ export function BusinessPageClient({
                 })}
               </div>
             )}
+          {/* Client instructions */}
+          {detail.clientInstructions &&
+            (getL(detail.clientInstructions, lang) ||
+              detail.clientInstructions.es) && (
+              <div
+                className="mt-3 p-3 rounded-2xl border"
+                style={{ borderColor: border, background: surface }}
+              >
+                <p className="text-xs font-bold mb-1" style={{ color: accent }}>
+                  📋 {lang === "es" ? "Instrucciones" : "Instructions"}
+                </p>
+                <p
+                  className="text-sm whitespace-pre-line"
+                  style={{ color: text }}
+                >
+                  {getL(detail.clientInstructions, lang) ||
+                    detail.clientInstructions.es}
+                </p>
+              </div>
+            )}
+
+          {((detail.paymentMethodDetails ?? []).length > 0 ||
+            (detail.paymentMethods ?? []).length > 0) &&
+            (() => {
+              const pmds: PaymentMethodDetail[] = detail.paymentMethodDetails
+                ?.length
+                ? detail.paymentMethodDetails
+                : (detail.paymentMethods ?? []).map((id) => ({ id }));
+              const PM = lang === "es" ? PM_ES : PM_EN;
+              return (
+                <div>
+                  <p
+                    className="text-[10px] font-semibold uppercase tracking-wide mb-1.5"
+                    style={{ color: textMuted }}
+                  >
+                    {lang === "es" ? "Métodos de pago" : "Payment methods"}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {pmds.map((pmd) => {
+                      const lbl = pmd.label || PM[pmd.id] || pmd.id;
+                      const mod = pmd.modifier;
+                      const hasDiscount = mod !== undefined && mod < 0;
+                      const hasSurcharge = mod !== undefined && mod > 0;
+                      return (
+                        <div
+                          key={pmd.id}
+                          className="inline-flex flex-col items-start px-2 py-1 rounded-lg border"
+                          style={{
+                            borderColor: hasDiscount
+                              ? "#22c55e40"
+                              : hasSurcharge
+                                ? "#f9731640"
+                                : `${accent}30`,
+                            background: hasDiscount
+                              ? "#22c55e08"
+                              : hasSurcharge
+                                ? "#f9731608"
+                                : `${accent}08`,
+                            width: "fit-content",
+                          }}
+                        >
+                          <span
+                            className="text-xs font-semibold whitespace-nowrap"
+                            style={{ color: text }}
+                          >
+                            {lbl}
+                          </span>
+                          {mod !== undefined && mod !== 0 && (
+                            <span
+                              className="text-[10px] font-bold whitespace-nowrap"
+                              style={{
+                                color: hasDiscount ? "#22c55e" : "#f97316",
+                              }}
+                            >
+                              {hasDiscount
+                                ? `${Math.abs(mod)}% dto.`
+                                : `+${mod}% recargo`}
+                            </span>
+                          )}
+                          {pmd.note && (
+                            <span
+                              className="text-[10px] opacity-60 whitespace-nowrap"
+                              style={{ color: textMuted }}
+                            >
+                              {pmd.note}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
         </div>
       </div>
 
@@ -1245,8 +1356,8 @@ export function BusinessPageClient({
           </div>
         )}
 
-        {/* Report button */}
-        <div className="flex justify-center pb-8 pt-4">
+        {/* Report + Edit links */}
+        <div className="flex flex-col items-center gap-2 pb-8 pt-4">
           <button
             onClick={() => setShowReport(true)}
             className="text-xs opacity-30 hover:opacity-60 transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-full"
@@ -1254,6 +1365,13 @@ export function BusinessPageClient({
           >
             🚩 {lang === "es" ? "Reportar negocio" : "Report business"}
           </button>
+          <a
+            href={`/editar/${slug}`}
+            className="text-xs opacity-25 hover:opacity-50 transition-all flex items-center gap-1"
+            style={{ color: textMuted }}
+          >
+            ✏️ {lang === "es" ? "Editar negocio" : "Edit business"}
+          </a>
         </div>
       </main>
 
@@ -1332,6 +1450,57 @@ export function BusinessPageClient({
           lang={lang}
           onClose={() => setShowSchedule(false)}
         />
+      )}
+      {/* ── Addresses modal ── */}
+      {showAddresses && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowAddresses(false)}
+          />
+          <div
+            className="relative w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl p-6 space-y-4 animate-slide-up"
+            style={{ background: surface, border: `1px solid ${border}` }}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="font-black text-lg" style={{ color: text }}>
+                📍 {lang === "es" ? "Direcciones" : "Addresses"}
+              </h2>
+              <button
+                onClick={() => setShowAddresses(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ background: bg, color: textMuted }}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-3">
+              {(
+                detail.addresses ?? (detail.address ? [detail.address] : [])
+              ).map((addr, i) => (
+                <div
+                  key={i}
+                  className="p-3 rounded-2xl"
+                  style={{ background: surface2 }}
+                >
+                  <p
+                    className="text-xs font-bold mb-0.5"
+                    style={{ color: accent }}
+                  >
+                    {i === 0
+                      ? lang === "es"
+                        ? "Principal"
+                        : "Main"
+                      : `${lang === "es" ? "Dirección" : "Address"} ${i + 1}`}
+                  </p>
+                  <p className="text-sm" style={{ color: text }}>
+                    {getL(addr, lang) || addr.es}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
       {/* ── Report modal ── */}
       {showReport && (

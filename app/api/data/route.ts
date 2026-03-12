@@ -1,18 +1,16 @@
 // ─── /api/data ────────────────────────────────────────────────────────────────
-// CRUD for JSON data files via storage driver (Blob in prod, fs in dev).
-// Access rules:
-//   GET  - always public (products/businesses are public catalog data)
-//   POST/DELETE - admin_session  OR  biz-owner writing their own slug
+// CRUD for JSON data files via storage driver.
+// GET  — public, cached via Next.js Data Cache (7 days, tagged)
+// POST/DELETE — requires admin or biz-owner auth; invalidates cache on success
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriver, isValidJsonKey } from '@/lib/storage'
+import { invalidateKey } from '@/lib/cache'
 
 function isAdminAuth(req: NextRequest) {
   return req.cookies.get('admin_session')?.value === 'authenticated'
 }
 
-// Check if this is a biz-owner writing data for their own slug.
-// Allowed keys: business/<slug>, products/<slug>
 function isBizOwnerAuth(req: NextRequest, key: string): boolean {
   const match = key.match(/^(?:business|products)\/([a-z0-9-]+)$/)
   if (!match) return false
@@ -20,8 +18,7 @@ function isBizOwnerAuth(req: NextRequest, key: string): boolean {
   return req.cookies.get(`biz_session_${slug}`)?.value === 'authenticated'
 }
 
-// Also allow biz-owners to update their own entry in businesses.json
-// This is handled by a dedicated /api/biz-data route instead
+// ── GET — cached ──────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
   const key = req.nextUrl.searchParams.get('file')
@@ -31,12 +28,22 @@ export async function GET(req: NextRequest) {
   try {
     const data = await (await getDriver()).readJSON(key)
     if (data === null) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
-    return NextResponse.json(data)
+
+    return NextResponse.json(data, {
+      headers: {
+        // No browser cache — data mutates frequently and must always be fresh on client.
+        // Server-side caching (7 days) is handled by lib/cache.ts via unstable_cache().
+        // If a CDN sits in front, it will also respect no-store.
+        'Cache-Control': 'no-store',
+      },
+    })
   } catch (e) {
     console.error('[api/data GET]', e)
     return NextResponse.json({ error: 'Error al leer' }, { status: 500 })
   }
 }
+
+// ── POST — write + invalidate ─────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
@@ -50,12 +57,16 @@ export async function POST(req: NextRequest) {
 
   try {
     await (await getDriver()).writeJSON(file, data)
+    // Invalidate AFTER successful write
+    invalidateKey(file)
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error('[api/data POST]', e)
     return NextResponse.json({ error: 'Error al guardar' }, { status: 500 })
   }
 }
+
+// ── DELETE — remove + invalidate ──────────────────────────────────────────────
 
 export async function DELETE(req: NextRequest) {
   const key = req.nextUrl.searchParams.get('file')
@@ -67,6 +78,8 @@ export async function DELETE(req: NextRequest) {
 
   try {
     await (await getDriver()).deleteJSON(key)
+    // Invalidate AFTER successful delete
+    invalidateKey(key)
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error('[api/data DELETE]', e)

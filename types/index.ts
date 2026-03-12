@@ -127,14 +127,25 @@ export type BusinessReport = {
 }
 export type BusinessesData = { businesses: Business[] }
 
+// ─── Payment method with optional modifier ──────────────────────────────────
+export type PaymentMethodDetail = {
+  id: string
+  label?: string
+  modifier?: number
+  modifierType?: 'percent' | 'fixed'
+  note?: string
+}
+
 export type BusinessDetail = {
   slug: string
   province?: string
   municipality?: string
   address?: LocalizedString
+  addresses?: LocalizedString[]
   phone?: string
   cardNumber?: string
   paymentMethods?: string[]
+  paymentMethodDetails?: PaymentMethodDetail[]
   donationsEnabled?: boolean
   website?: string
   socialLinks?: SocialLinks
@@ -142,7 +153,10 @@ export type BusinessDetail = {
   currency?: string
   palette?: BusinessPalette
   seo?: SeoMeta
-  promoCodes?: PromoCode[]        // Premium: promotional codes
+  promoCodes?: PromoCode[]
+  clientInstructions?: LocalizedString
+  businessCategories?: string[]
+  businessTags?: string[]
 }
 
 // ─── Promotions ──────────────────────────────────────────────────────────────

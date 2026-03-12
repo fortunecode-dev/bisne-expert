@@ -1031,6 +1031,11 @@ async function apiDel(file: string) {
 export default function AdminPage() {
   const [lang, setLang] = useState<Lang>("es");
   const [tab, setTab] = useState<"businesses" | "config" | "reports">("businesses");
+  const [resetSlug, setResetSlug] = useState<string | null>(null);
+  const [resetPwd, setResetPwd] = useState("");
+  const [resetConfirm, setResetConfirm] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetPwdVisible, setResetPwdVisible] = useState(false);
   const [businesses, setBusinesses] = useState<AdminBiz[]>([]);
   const [products, setProducts] = useState<Record<string, Product[]>>({});
 
@@ -1530,6 +1535,14 @@ export default function AdminPage() {
                           👁️ Ver
                         </Link>
                         <button
+                          onClick={() => { setResetSlug(b.slug); setResetPwd(""); setResetConfirm(""); }}
+                          className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
+                          style={{ borderColor: "#3b82f640", color: "#60a5fa" }}
+                          title="Reiniciar contraseña"
+                        >
+                          🔑
+                        </button>
+                        <button
                           onClick={() => deleteBiz(b.slug)}
                           className="w-8 h-8 rounded-xl flex items-center justify-center border text-sm hover:opacity-80"
                           style={{ borderColor: "#dc262640", color: "#f87171" }}
@@ -1792,6 +1805,72 @@ export default function AdminPage() {
       {/* ── REPORTS ── */}
       {tab === "reports" && (
         <ReportsTab />
+      )}
+      {/* ── Reset Password Modal ── */}
+      {resetSlug && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setResetSlug(null)} />
+          <div className="relative w-full max-w-sm rounded-3xl p-6 space-y-4"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <div className="flex items-center justify-between">
+              <h2 className="font-black text-base" style={{ color: "var(--color-text)" }}>
+                🔑 Reiniciar contraseña
+              </h2>
+              <button onClick={() => setResetSlug(null)} className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ background: "var(--color-surface-2)", color: "var(--color-text-muted)" }}>✕</button>
+            </div>
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              Negocio: <strong style={{ color: "var(--color-accent)" }}>/{resetSlug}</strong>
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs opacity-50 block mb-1">Nueva contraseña</label>
+                <div className="relative">
+                  <input type={resetPwdVisible ? "text" : "password"} value={resetPwd} onChange={e => setResetPwd(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                    className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none pr-10"
+                    style={{ background: "var(--color-surface-2)", borderColor: "var(--color-border)", color: "var(--color-text)" }} />
+                  <button type="button" onClick={() => setResetPwdVisible(p => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs opacity-50 hover:opacity-100"
+                    style={{ color: "var(--color-text-muted)" }}>{resetPwdVisible ? "🙈" : "👁️"}</button>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs opacity-50 block mb-1">Confirmar contraseña</label>
+                <input type={resetPwdVisible ? "text" : "password"} value={resetConfirm} onChange={e => setResetConfirm(e.target.value)}
+                  placeholder="Repite la contraseña"
+                  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
+                  style={{ background: "var(--color-surface-2)", borderColor: "var(--color-border)", color: "var(--color-text)" }} />
+              </div>
+              {resetPwd && resetConfirm && resetPwd !== resetConfirm && (
+                <p className="text-xs text-red-400">Las contraseñas no coinciden</p>
+              )}
+              <button
+                disabled={resetLoading || !resetPwd || resetPwd.length < 6 || resetPwd !== resetConfirm}
+                onClick={async () => {
+                  setResetLoading(true);
+                  const hashRes = await fetch("/api/biz-auth/hash", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ password: resetPwd }),
+                  });
+                  if (hashRes.ok) {
+                    const { hash, code } = await hashRes.json();
+                    const list = businesses.map(b => b.slug === resetSlug
+                      ? { ...b, ownerPasswordHash: hash, ownerCode: code } : b);
+                    setBusinesses(list);
+                    await persistBizList(list);
+                    showToast(`✓ Contraseña actualizada. Código: ${code}`);
+                    setResetSlug(null);
+                  }
+                  setResetLoading(false);
+                }}
+                className="w-full py-3 rounded-xl font-black text-sm transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+                style={{ background: "var(--color-accent)", color: "white" }}>
+                {resetLoading ? "⏳ Actualizando…" : "🔑 Actualizar contraseña"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

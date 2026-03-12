@@ -1,9 +1,10 @@
-// /api/biz-data — Owner-authenticated route to update their own business entry
-// in businesses.json (owners can't write businesses.json directly - admin-only).
-// Also handles new business registration (no auth needed for POST with isNew).
+// /api/biz-data — Owner-authenticated route for business mutations.
+// Handles both new registration and owner updates.
+// Invalidates cache after every successful mutation.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriver } from '@/lib/storage'
+import { invalidateKeys } from '@/lib/cache'
 
 function isAdminAuth(req: NextRequest) {
   return req.cookies.get('admin_session')?.value === 'authenticated'
@@ -12,8 +13,6 @@ function isBizOwnerAuth(req: NextRequest, slug: string) {
   return req.cookies.get(`biz_session_${slug}`)?.value === 'authenticated'
 }
 
-// POST /api/biz-data
-// body: { slug, updates, isNew?, ownerPasswordHash?, ownerCode? }
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const { slug, updates, isNew, ownerPasswordHash, ownerCode } = body
@@ -25,7 +24,6 @@ export async function POST(req: NextRequest) {
   const businesses: any[] = bizData.businesses ?? []
 
   if (isNew) {
-    // Registration: slug must not exist
     if (businesses.find((b: any) => b.slug === slug)) {
       return NextResponse.json({ error: `El slug "${slug}" ya está en uso` }, { status: 409 })
     }
@@ -34,11 +32,13 @@ export async function POST(req: NextRequest) {
       slug,
       ownerPasswordHash,
       ownerCode,
-      hidden: true,              // pending admin approval
+      hidden: true,
       created_at: new Date().toISOString(),
     }
     await driver.writeJSON('businesses', { businesses: [...businesses, newBiz] })
-    return NextResponse.json({ ok: true, slug, code: ownerCode })
+    // Invalidate businesses cache
+    invalidateKeys(['businesses'])
+    return NextResponse.json({ ok: true, slug, code: ownerCode }, { headers: { 'Cache-Control': 'no-store' } })
   }
 
   // Edit: requires admin or owner
@@ -46,12 +46,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
-  // Owner-safe fields (owners cannot change tier/slug/id)
   const ownerAllowedFields = [
     'name', 'description', 'slogan', 'logo', 'image', 'unavailable',
-    'categories', 'seo',
+    'categories', 'seo', 'coverImages',
   ]
-  const adminAllowedFields = [...ownerAllowedFields, 'sponsored', 'premium', 'hidden', 'slug', 'coverImages', 'ownerPasswordHash', 'ownerCode']
+  const adminAllowedFields = [
+    ...ownerAllowedFields,
+    'sponsored', 'premium', 'hidden', 'slug',
+    'ownerPasswordHash', 'ownerCode',
+  ]
   const allowed = isAdminAuth(req) ? adminAllowedFields : ownerAllowedFields
 
   const safeUpdates: any = {}
@@ -63,5 +66,7 @@ export async function POST(req: NextRequest) {
     b.slug === slug ? { ...b, ...safeUpdates } : b
   )
   await driver.writeJSON('businesses', { businesses: updatedList })
-  return NextResponse.json({ ok: true })
+  // Invalidate businesses + specific business detail
+  invalidateKeys(['businesses', `business/${slug}`])
+  return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
 }

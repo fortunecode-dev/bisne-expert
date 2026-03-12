@@ -19,5 +19,6 @@ export async function POST(req: NextRequest) {
     maxAge: 60 * 60 * 24 * 7, // 7 días
     path: '/',
   })
+  res.headers.set('Cache-Control', 'no-store, no-cache')
   return res
 }

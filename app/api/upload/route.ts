@@ -1,13 +1,13 @@
 // ─── /api/upload ──────────────────────────────────────────────────────────────
-// Image upload via storage driver (Blob in prod, fs/public in dev).
-// Returns a public URL that works in both environments.
+// Image upload via Supabase Storage (production) or local fs (dev).
+// Supabase sets 7-day CDN cache automatically via cacheControl: '604800'.
+// Returns a public URL with long-lived cache headers.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriver } from '@/lib/storage'
 
 function isAuth(req: NextRequest): boolean {
   if (req.cookies.get('admin_session')?.value === 'authenticated') return true
-  // Allow any biz-session owner to upload images
   const allCookies = req.cookies.getAll()
   return allCookies.some(c => c.name.startsWith('biz_session_') && c.value === 'authenticated')
 }
@@ -18,9 +18,9 @@ const ALLOWED_TYPES: Record<string, string> = {
   'image/webp': 'webp',
   'image/gif': 'gif',
   'image/svg+xml': 'svg',
+  'image/avif': 'avif',
 }
 
-// POST /api/upload  multipart: field "image", optional "name" hint
 export async function POST(req: NextRequest) {
   if (!isAuth(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
@@ -35,20 +35,25 @@ export async function POST(req: NextRequest) {
 
   const safeName = nameHint.replace(/[^a-z0-9\-_]/gi, '-').toLowerCase().slice(0, 40)
   const filename = `${Date.now()}${safeName ? '-' + safeName : ''}.${ext}`
-  const key = `uploads/${filename}` // storage key
+  const key = `uploads/${filename}`
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer())
     const driver = await getDriver()
     const url = await driver.uploadFile(key, buffer, file.type)
-    return NextResponse.json({ ok: true, url })
+
+    // Return URL — Supabase CDN already has 7-day cache set at upload time
+    return NextResponse.json({ ok: true, url }, {
+      headers: {
+        'Cache-Control': 'no-store', // don't cache the upload response itself
+      },
+    })
   } catch (e) {
     console.error('[api/upload POST]', e)
     return NextResponse.json({ error: 'Error al subir imagen' }, { status: 500 })
   }
 }
 
-// DELETE /api/upload?key=uploads/filename.jpg
 export async function DELETE(req: NextRequest) {
   if (!isAuth(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 

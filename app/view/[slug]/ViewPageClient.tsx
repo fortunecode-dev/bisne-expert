@@ -106,9 +106,9 @@ export function ViewPageClient({ business, detail, products, slug }: Props) {
             }
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-black text-sm truncate" style={{ fontFamily: 'var(--font-display)', color: text }}>
+            <a href={`/${slug}`} className="font-black text-sm truncate block hover:opacity-80 transition-all" style={{ fontFamily: 'var(--font-display)', color: text }}>
               {getL(business.name, lang)}
-            </p>
+            </a>
             <p className="text-[10px] leading-none" style={{ color: statusColor }}>
               {schedStatus.label}
             </p>

@@ -220,52 +220,59 @@ function Chip({
   );
 }
 
-
-
 // ─── Main client component (receives data from server) ────────────────────────
 interface HomeClientProps {
-  initialBusinesses: Business[]
-  initialDetails: Record<string, BusinessDetail>
-  initialConfig: any
+  initialBusinesses: Business[];
+  initialDetails: Record<string, BusinessDetail>;
+  initialConfig: any;
 }
 
-export default function HomeClient({ initialBusinesses, initialDetails, initialConfig }: HomeClientProps) {
-  const [lang, setLang] = useLang()
-  const [businesses] = useState<Business[]>(initialBusinesses)
-  const [details] = useState<Record<string, BusinessDetail>>(initialDetails)
-  const [config] = useState<any>(initialConfig)
-  const [showDevContact, setShowDevContact] = useState(false)
-  const [promotedProducts, setPromotedProducts] = useState<Array<{biz: Business; product: any}>>([])
+export default function HomeClient({
+  initialBusinesses,
+  initialDetails,
+  initialConfig,
+}: HomeClientProps) {
+  const [lang, setLang] = useLang();
+  const [businesses] = useState<Business[]>(initialBusinesses);
+  const [details] = useState<Record<string, BusinessDetail>>(initialDetails);
+  const [config] = useState<any>(initialConfig);
+  const [showDevContact, setShowDevContact] = useState(false);
+  const [promotedProducts, setPromotedProducts] = useState<
+    Array<{ biz: Business; product: any }>
+  >([]);
 
   // Fetch promoted products from premium businesses
   useEffect(() => {
-    const premiumBiz = businesses.filter(b => b.premium)
-    if (premiumBiz.length === 0) return
+    const premiumBiz = businesses.filter((b) => b.premium);
+    if (premiumBiz.length === 0) return;
     Promise.all(
-      premiumBiz.map(biz =>
+      premiumBiz.map((biz) =>
         fetch(`/api/data?file=${biz.slug}-products`)
-          .then(r => r.ok ? r.json() : { products: [] })
-          .then(data => (data.products ?? [])
-            .filter((p: any) => p.promote && p.promote !== 'NO' && !p.hidden)
-            .map((p: any) => ({ biz, product: p }))
+          .then((r) => (r.ok ? r.json() : { products: [] }))
+          .then((data) =>
+            (data.products ?? [])
+              .filter((p: any) => p.promote && p.promote !== "NO" && !p.hidden)
+              .map((p: any) => ({ biz, product: p })),
           )
-          .catch(() => [])
-      )
-    ).then(results => setPromotedProducts(results.flat()))
-  }, [businesses])
+          .catch(() => []),
+      ),
+    ).then((results) => setPromotedProducts(results.flat()));
+  }, [businesses]);
 
   // Apply theme from config on mount
   useEffect(() => {
-    if (config?.homePalette) applyHomeTheme(config.homePalette)
-  }, [])
+    if (config?.homePalette) applyHomeTheme(config.homePalette);
+  }, []);
 
   // Filters
-  const [search, setSearch] = useState("")
-  const [filterOpen, setFilterOpen] = useState<boolean | null>(null)
-  const [filterCategory, setFilterCategory] = useState<string | null>(null)
-  const [filterProvince, setFilterProvince] = useState<string | null>(null)
-  const [filterMunicipality, setFilterMunicipality] = useState<string | null>(null)
-  const [filterPayment, setFilterPayment] = useState<string | null>(null)
+  const [search, setSearch] = useState("");
+  const [filterOpen, setFilterOpen] = useState<boolean | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [filterProvince, setFilterProvince] = useState<string | null>(null);
+  const [filterMunicipality, setFilterMunicipality] = useState<string | null>(
+    null,
+  );
+  const [filterPayment, setFilterPayment] = useState<string | null>(null);
 
   // Derive filter options from available data
   const allCategories = useMemo(() => {
@@ -386,23 +393,31 @@ export default function HomeClient({ initialBusinesses, initialDetails, initialC
 
   // Build marquee items: configured items + promoted products from premium businesses
   const marqueeItems = useMemo(() => {
-    const configured = (config?.marqueeItems ?? []) as Array<{slug: string; promoType: string; active: boolean}>
-    const items: any[] = []
+    const configured = (config?.marqueeItems ?? []) as Array<{
+      slug: string;
+      promoType: string;
+      active: boolean;
+    }>;
+    const items: any[] = [];
 
     // Admin-configured business items
     if (configured.length > 0) {
       configured
-        .filter(m => m.active !== false)
-        .forEach(m => {
-          const biz = businesses.find(b => b.slug === m.slug)
-          if (!biz) return
-          items.push({ biz, detail: details[m.slug], promo: { ...m, promoType: m.promoType as any } })
-        })
+        .filter((m) => m.active !== false)
+        .forEach((m) => {
+          const biz = businesses.find((b) => b.slug === m.slug);
+          if (!biz) return;
+          items.push({
+            biz,
+            detail: details[m.slug],
+            promo: { ...m, promoType: m.promoType as any },
+          });
+        });
     } else {
       // Auto: sponsored/premium businesses
-      const featured = businesses.filter(b => b.sponsored || b.premium)
-      const pool = featured.length >= 3 ? featured : businesses.slice(0, 8)
-      pool.forEach(biz => items.push({ biz, detail: details[biz.slug] }))
+      const featured = businesses.filter((b) => b.sponsored || b.premium);
+      const pool = featured.length >= 3 ? featured : businesses.slice(0, 8);
+      pool.forEach((biz) => items.push({ biz, detail: details[biz.slug] }));
     }
 
     // Add promoted products from premium businesses (interleaved)
@@ -411,13 +426,15 @@ export default function HomeClient({ initialBusinesses, initialDetails, initialC
         biz,
         detail: details[biz.slug],
         promo: { promoType: product.promote },
-        productName: (lang === 'es' ? product.name?.es : product.name?.en) || product.name?.es,
+        productName:
+          (lang === "es" ? product.name?.es : product.name?.en) ||
+          product.name?.es,
         productImage: product.image,
-      })
-    })
+      });
+    });
 
-    return items
-  }, [businesses, details, config, promotedProducts, lang])
+    return items;
+  }, [businesses, details, config, promotedProducts, lang]);
 
   return (
     <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
@@ -439,14 +456,17 @@ export default function HomeClient({ initialBusinesses, initialDetails, initialC
                 color: "var(--color-text)",
               }}
             >
-              CatalogOS
+              BisneExpert
             </span>
           </div>
           <LangToggle lang={lang} setLang={setLang} />
         </div>
         {/* Marquee below nav — always visible at top */}
         {marqueeItems.length > 0 && (
-          <div className="border-t" style={{ borderColor: "var(--color-border)" }}>
+          <div
+            className="border-t"
+            style={{ borderColor: "var(--color-border)" }}
+          >
             <MarqueeBanner items={marqueeItems} lang={lang} size="lg" />
           </div>
         )}
@@ -695,10 +715,16 @@ export default function HomeClient({ initialBusinesses, initialDetails, initialC
       >
         <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="text-center sm:text-left">
-            <p className="text-xs mb-1" style={{ color: "var(--color-text-muted)" }}>
+            <p
+              className="text-xs mb-1"
+              style={{ color: "var(--color-text-muted)" }}
+            >
               {lang === "es" ? "Desarrollado por" : "Developed by"}
             </p>
-            <p className="font-bold text-sm mb-3" style={{ color: "var(--color-text)" }}>
+            <p
+              className="font-bold text-sm mb-3"
+              style={{ color: "var(--color-text)" }}
+            >
               {dev.name || "Dev Studio"}
             </p>
             <button
@@ -734,7 +760,8 @@ export default function HomeClient({ initialBusinesses, initialDetails, initialC
                 color: "white",
               }}
             >
-              🏪 {lang === "es" ? "Registrar mi negocio" : "Register my business"}
+              🏪{" "}
+              {lang === "es" ? "Registrar mi negocio" : "Register my business"}
             </Link>
           </div>
         </div>

@@ -91,3 +91,6 @@ el abierto hasta en los detalles del negocio que salga debjo de la descripcion y
 que los controles de la galeria tengan los colores del tema
 los negocios creados deben estar ocultos por defecto para que el admin los apruebe
 la peticion de login despues de autoregistrar un negocio debe esperar que la peticion de registrarlo regrese para que el login no falle
+
+
+segun la cantidad de elementos que tenga el marque aplicar un difuminado en los extremos para que no se vean elementos repetidos mas de una vez
