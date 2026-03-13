@@ -5,7 +5,6 @@ import { applyHomeTheme } from "@/lib/palette";
 import { isOpenNow } from "@/lib/schedule";
 import { BusinessCard } from "@/components/business/BusinessCard";
 import { LangToggle } from "@/components/ui/LangToggle";
-import { MarqueeBanner } from "@/components/ui/MarqueeBanner";
 import { useLang } from "@/hooks/useLang";
 import Link from "next/link";
 
@@ -462,14 +461,14 @@ export default function HomeClient({
           <LangToggle lang={lang} setLang={setLang} />
         </div>
         {/* Marquee below nav — always visible at top */}
-        {marqueeItems.length > 0 && (
+        {/* {marqueeItems.length > 0 && (
           <div
             className="border-t"
             style={{ borderColor: "var(--color-border)" }}
           >
             <MarqueeBanner items={marqueeItems} lang={lang} size="lg" />
           </div>
-        )}
+        )} */}
       </header>
 
       {/* ── Hero ── */}
@@ -658,19 +657,6 @@ export default function HomeClient({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((biz) => (
             <div key={biz.id} className="relative">
-              {/* Sponsored badge */}
-              {biz.sponsored && (
-                <div
-                  className="absolute top-3 left-3 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold backdrop-blur-sm"
-                  style={{
-                    background: "var(--color-accent)",
-                    color: "white",
-                    fontSize: 10,
-                  }}
-                >
-                  ⭐ {lang === "es" ? "Patrocinado" : "Sponsored"}
-                </div>
-              )}
               <BusinessCard
                 business={biz}
                 detail={details[biz.slug]}

@@ -6,7 +6,6 @@ import {
   Product,
   ProductTag,
   BusinessPalette,
-  PromoCode,
   Lang,
   LocalizedString,
   SeoMeta,
@@ -24,7 +23,6 @@ import {
   ANIMATED_PALETTES,
   applyGlobalPalette,
 } from "@/lib/palette";
-// Config and custom palettes are persisted via /api/data on the server
 import { getL } from "@/lib/data";
 import { isOpenNow, DAY_NAMES_ES } from "@/lib/schedule";
 import Link from "next/link";
@@ -157,7 +155,8 @@ function LF({
         {label}
         {required && <span className="text-red-400">*</span>}
       </label>
-      <div className="grid grid-cols-2 gap-2">
+      {/* CHANGED: stack vertically on mobile, side-by-side on sm+ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {(["es", "en"] as const).map((l) => (
           <div key={l} className="relative">
             <Tag
@@ -295,12 +294,19 @@ function ImgUpload({
       <div
         className="relative rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden"
         style={{
-          borderColor: drag ? "var(--color-accent)" : value ? "var(--color-accent)" : "var(--color-border)",
+          borderColor: drag
+            ? "var(--color-accent)"
+            : value
+              ? "var(--color-accent)"
+              : "var(--color-border)",
           minHeight: value ? "auto" : 90,
           background: "var(--color-surface-2)",
         }}
         onClick={() => !uploading && inputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDrag(true);
+        }}
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => {
           e.preventDefault();
@@ -312,7 +318,9 @@ function ImgUpload({
         {uploading ? (
           <div className="py-6 text-center">
             <div className="text-2xl mb-1">⏳</div>
-            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Subiendo al servidor…</p>
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              Subiendo al servidor…
+            </p>
           </div>
         ) : value ? (
           <>
@@ -351,7 +359,10 @@ function ImgUpload({
         style={inputStyle}
       />
       {value.startsWith("/uploads/") && (
-        <p className="text-xs font-semibold" style={{ color: "var(--color-accent)" }}>
+        <p
+          className="text-xs font-semibold"
+          style={{ color: "var(--color-accent)" }}
+        >
           ✓ Imagen guardada en el servidor
         </p>
       )}
@@ -391,20 +402,24 @@ function ScheduleEditor({
           {WEEKDAYS.map((day) => {
             const ds = schedule.days[day] ?? { ...DEFAULT_DAY_SCHEDULE };
             return (
+              // CHANGED: wrap to two rows on very small screens
               <div
                 key={day}
-                className="flex items-center gap-2 p-2 rounded-xl border"
+                className="flex flex-wrap items-center gap-2 p-2 rounded-xl border"
                 style={{
                   borderColor: "var(--color-border)",
                   background: "var(--color-surface-2)",
                 }}
               >
+                {/* Day name — fixed width */}
                 <span
-                  className="text-xs font-bold w-8 flex-shrink-0"
+                  className="text-xs font-bold w-7 flex-shrink-0"
                   style={{ color: "var(--color-text-muted)" }}
                 >
                   {DAY_NAMES_ES[day]}
                 </span>
+
+                {/* Closed toggle */}
                 <label
                   className="flex items-center gap-1.5 cursor-pointer"
                   onClick={() => updDay(day, { closed: !ds.closed })}
@@ -429,10 +444,12 @@ function ScheduleEditor({
                     Cerrado
                   </span>
                 </label>
+
                 {!ds.closed && (
                   <>
+                    {/* 24h toggle */}
                     <label
-                      className="flex items-center gap-1.5 cursor-pointer ml-1"
+                      className="flex items-center gap-1.5 cursor-pointer"
                       onClick={() => updDay(day, { h24: !ds.h24 })}
                     >
                       <div
@@ -461,8 +478,10 @@ function ScheduleEditor({
                         24h
                       </span>
                     </label>
+
+                    {/* Time range — takes full width on wrap */}
                     {!ds.h24 && (
-                      <div className="flex items-center gap-1 flex-1">
+                      <div className="flex items-center gap-1 flex-1 min-w-[140px]">
                         <input
                           type="time"
                           value={ds.open}
@@ -583,9 +602,9 @@ function TagsEditor({
               style={inputStyle}
             />
           </div>
-          {/* Colors */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 flex-1">
+          {/* CHANGED: Colors + preview in a more flexible layout */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 min-w-[110px] flex-1">
               <div
                 className="relative w-8 h-8 rounded-lg overflow-hidden border flex-shrink-0"
                 style={{ borderColor: "var(--color-border)" }}
@@ -601,10 +620,10 @@ function TagsEditor({
                   style={{ background: tag.color }}
                 />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p
                   className="text-xs mb-0.5"
-                  style={{ color: "var(--color-text-muted)" }}
+                  style={{ color: "var(--color-text-muted)", fontSize: 10 }}
                 >
                   Fondo
                 </p>
@@ -616,7 +635,7 @@ function TagsEditor({
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-1">
+            <div className="flex items-center gap-2 min-w-[110px] flex-1">
               <div
                 className="relative w-8 h-8 rounded-lg overflow-hidden border flex-shrink-0"
                 style={{ borderColor: "var(--color-border)" }}
@@ -634,10 +653,10 @@ function TagsEditor({
                   style={{ background: tag.textColor ?? "#ffffff" }}
                 />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p
                   className="text-xs mb-0.5"
-                  style={{ color: "var(--color-text-muted)" }}
+                  style={{ color: "var(--color-text-muted)", fontSize: 10 }}
                 >
                   Texto
                 </p>
@@ -651,19 +670,21 @@ function TagsEditor({
                 />
               </div>
             </div>
-            {/* Preview */}
-            <span
-              className="px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
-              style={{ background: tag.color, color: tag.textColor ?? "#fff" }}
-            >
-              {tag.label.es || "Tag"}
-            </span>
-            <button
-              onClick={() => del(i)}
-              className="text-red-400 text-sm flex-shrink-0"
-            >
-              ✕
-            </button>
+            {/* Preview + delete */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span
+                className="px-2.5 py-1 rounded-full text-xs font-bold"
+                style={{
+                  background: tag.color,
+                  color: tag.textColor ?? "#fff",
+                }}
+              >
+                {tag.label.es || "Tag"}
+              </span>
+              <button onClick={() => del(i)} className="text-red-400 text-sm">
+                ✕
+              </button>
+            </div>
           </div>
         </div>
       ))}
@@ -685,31 +706,48 @@ function PaletteEditor({
     { name: string; palette: BusinessPalette }[]
   >([]);
 
-  // Load custom palettes from config on mount
   useEffect(() => {
-    fetch('/api/data?file=config').then(r => r.ok ? r.json() : null).then(cfg => {
-      if (cfg?.customPalettes) setSavedCustom(cfg.customPalettes)
-    }).catch(() => {})
-  }, [])
+    fetch("/api/data?file=config")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cfg) => {
+        if (cfg?.customPalettes) setSavedCustom(cfg.customPalettes);
+      })
+      .catch(() => {});
+  }, []);
 
   const saveCustom = async () => {
     const name = customName.trim() || "Mi paleta";
-    const entry = { name, palette: { ...palette, name } }
-    const updated = [...savedCustom.filter(p => p.name !== name), entry]
-    setSavedCustom(updated)
-    onChange({ ...palette, name })
-    // Persist to server — merge into existing config
-    const cfg = await fetch('/api/data?file=config').then(r => r.ok ? r.json() : {}).catch(() => ({}))
-    await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ file: 'config', data: { ...cfg, customPalettes: updated } }) })
+    const entry = { name, palette: { ...palette, name } };
+    const updated = [...savedCustom.filter((p) => p.name !== name), entry];
+    setSavedCustom(updated);
+    onChange({ ...palette, name });
+    const cfg = await fetch("/api/data?file=config")
+      .then((r) => (r.ok ? r.json() : {}))
+      .catch(() => ({}));
+    await fetch("/api/data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        file: "config",
+        data: { ...cfg, customPalettes: updated },
+      }),
+    });
   };
 
   const deleteCustom = async (name: string) => {
-    const updated = savedCustom.filter(p => p.name !== name)
-    setSavedCustom(updated)
-    const cfg = await fetch('/api/data?file=config').then(r => r.ok ? r.json() : {}).catch(() => ({}))
-    await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ file: 'config', data: { ...cfg, customPalettes: updated } }) })
+    const updated = savedCustom.filter((p) => p.name !== name);
+    setSavedCustom(updated);
+    const cfg = await fetch("/api/data?file=config")
+      .then((r) => (r.ok ? r.json() : {}))
+      .catch(() => ({}));
+    await fetch("/api/data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        file: "config",
+        data: { ...cfg, customPalettes: updated },
+      }),
+    });
   };
 
   const fields: { key: keyof BusinessPalette; label: string }[] = [
@@ -726,11 +764,29 @@ function PaletteEditor({
   ];
 
   const groups = [
-    { label: "🎨 Estándar (Común / Patrocinado / Premium)", tier: 'standard' as const, items: DARK_PALETTES.concat(LIGHT_PALETTES) },
-    { label: "🎉 Festivos (Patrocinado / Premium)", tier: 'sponsored' as const, items: HOLIDAY_PALETTES },
-    { label: "✨ Animados (solo Premium)", tier: 'premium' as const, items: ANIMATED_PALETTES },
+    {
+      label: "🎨 Estándar",
+      tier: "standard" as const,
+      items: DARK_PALETTES.concat(LIGHT_PALETTES),
+    },
+    {
+      label: "🎉 Festivos",
+      tier: "sponsored" as const,
+      items: HOLIDAY_PALETTES,
+    },
+    {
+      label: "✨ Animados (Premium)",
+      tier: "premium" as const,
+      items: ANIMATED_PALETTES,
+    },
     ...(savedCustom.length > 0
-      ? [{ label: "⭐ Mis paletas", tier: 'standard' as const, items: savedCustom }]
+      ? [
+          {
+            label: "⭐ Mis paletas",
+            tier: "standard" as const,
+            items: savedCustom,
+          },
+        ]
       : []),
   ];
 
@@ -742,7 +798,7 @@ function PaletteEditor({
           <button
             key={t}
             onClick={() => setTab(t)}
-            className="px-4 py-2 rounded-xl text-xs font-bold transition-all"
+            className="px-3 py-2 rounded-xl text-xs font-bold transition-all"
             style={
               tab === t
                 ? { background: "var(--color-accent)", color: "white" }
@@ -768,6 +824,7 @@ function PaletteEditor({
               >
                 {group.label}
               </p>
+              {/* CHANGED: 2 cols on mobile, 3 on sm+ */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {group.items.map((preset) => {
                   const p = preset.palette;
@@ -780,22 +837,44 @@ function PaletteEditor({
                       className="rounded-xl p-2.5 border text-left transition-all hover:scale-105 active:scale-95 relative overflow-hidden"
                       style={{
                         background: p.bg,
-                        borderColor: isActive ? p.accent : isAnimated ? p.accent + '80' : p.border,
-                        boxShadow: isActive ? `0 0 0 2px ${p.accent}` : isAnimated ? `0 0 12px ${p.accent}40` : "none",
+                        borderColor: isActive
+                          ? p.accent
+                          : isAnimated
+                            ? p.accent + "80"
+                            : p.border,
+                        boxShadow: isActive
+                          ? `0 0 0 2px ${p.accent}`
+                          : isAnimated
+                            ? `0 0 12px ${p.accent}40`
+                            : "none",
                       }}
                     >
                       {isAnimated && (
-                        <div className="absolute top-1.5 right-1.5 text-[9px] font-black px-1 py-0.5 rounded-full"
-                          style={{ background: '#a855f7', color: '#fff' }}>
+                        <div
+                          className="absolute top-1.5 right-1.5 text-[9px] font-black px-1 py-0.5 rounded-full"
+                          style={{ background: "#a855f7", color: "#fff" }}
+                        >
                           ✨
                         </div>
                       )}
                       <div className="flex gap-1 mb-1.5">
-                        <div className="w-5 h-5 rounded-full" style={{ background: p.accent }} />
-                        <div className="w-5 h-5 rounded-full" style={{ background: p.surface }} />
-                        <div className="w-5 h-5 rounded-full" style={{ background: p.priceColor }} />
+                        <div
+                          className="w-5 h-5 rounded-full"
+                          style={{ background: p.accent }}
+                        />
+                        <div
+                          className="w-5 h-5 rounded-full"
+                          style={{ background: p.surface }}
+                        />
+                        <div
+                          className="w-5 h-5 rounded-full"
+                          style={{ background: p.priceColor }}
+                        />
                       </div>
-                      <p className="text-xs font-semibold leading-tight pr-4" style={{ color: p.text, fontSize: 10 }}>
+                      <p
+                        className="text-xs font-semibold leading-tight pr-4"
+                        style={{ color: p.text, fontSize: 10 }}
+                      >
                         {preset.name}
                       </p>
                     </button>
@@ -809,8 +888,8 @@ function PaletteEditor({
 
       {tab === "custom" && (
         <div className="space-y-4">
-          {/* Color pickers grid */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* CHANGED: 1 col mobile, 2 cols sm+ */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {fields.map(({ key, label }) => (
               <div key={key} className="flex items-center gap-2">
                 <div
@@ -1009,28 +1088,32 @@ function PaletteEditor({
   );
 }
 
-// ─── Main Admin Page ──────────────────────────────────────────────────────────
 // ─── API helpers ─────────────────────────────────────────────────────────────
 async function apiGet(file: string) {
-  const res = await fetch(`/api/data?file=${encodeURIComponent(file)}`)
-  return res.ok ? res.json() : null
+  const res = await fetch(`/api/data?file=${encodeURIComponent(file)}`);
+  return res.ok ? res.json() : null;
 }
 async function apiSave(file: string, data: unknown) {
-  const res = await fetch('/api/data', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("/api/data", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ file, data }),
-  })
-  return res.ok
+  });
+  return res.ok;
 }
 async function apiDel(file: string) {
-  const res = await fetch(`/api/data?file=${encodeURIComponent(file)}`, { method: 'DELETE' })
-  return res.ok
+  const res = await fetch(`/api/data?file=${encodeURIComponent(file)}`, {
+    method: "DELETE",
+  });
+  return res.ok;
 }
 
+// ─── Main Admin Page ──────────────────────────────────────────────────────────
 export default function AdminPage() {
   const [lang, setLang] = useState<Lang>("es");
-  const [tab, setTab] = useState<"businesses" | "config" | "reports">("businesses");
+  const [tab, setTab] = useState<"businesses" | "config" | "reports">(
+    "businesses",
+  );
   const [resetSlug, setResetSlug] = useState<string | null>(null);
   const [resetPwd, setResetPwd] = useState("");
   const [resetConfirm, setResetConfirm] = useState("");
@@ -1038,10 +1121,12 @@ export default function AdminPage() {
   const [resetPwdVisible, setResetPwdVisible] = useState(false);
   const [businesses, setBusinesses] = useState<AdminBiz[]>([]);
   const [products, setProducts] = useState<Record<string, Product[]>>({});
-
   const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState<any>({ customPalettes: [], developer: {} });
+  const [config, setConfig] = useState<any>({
+    customPalettes: [],
+    developer: {},
+  });
   const fileRef = useRef<HTMLInputElement>(null);
 
   const showToast = (msg: string) => {
@@ -1049,98 +1134,138 @@ export default function AdminPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // ── Load everything from the server on mount ──
   useEffect(() => {
-    setLoading(true)
-    ;(async () => {
+    setLoading(true);
+    (async () => {
       try {
-        const bizData = await apiGet('businesses')
-        if (!bizData) return
-        const bizList: Business[] = bizData.businesses
+        const bizData = await apiGet("businesses");
+        if (!bizData) return;
+        const bizList: Business[] = bizData.businesses;
 
         const [detailResults, prodResults, cfg] = await Promise.all([
-          Promise.allSettled(bizList.map(b => apiGet(`business/${b.slug}`).then(d => ({ slug: b.slug, d: d ?? { slug: b.slug } })))),
-          Promise.allSettled(bizList.map(b => apiGet(`products/${b.slug}`).then(d => ({ slug: b.slug, p: d?.products ?? [] })))),
-          apiGet('config'),
-        ])
+          Promise.allSettled(
+            bizList.map((b) =>
+              apiGet(`business/${b.slug}`).then((d) => ({
+                slug: b.slug,
+                d: d ?? { slug: b.slug },
+              })),
+            ),
+          ),
+          Promise.allSettled(
+            bizList.map((b) =>
+              apiGet(`products/${b.slug}`).then((d) => ({
+                slug: b.slug,
+                p: d?.products ?? [],
+              })),
+            ),
+          ),
+          apiGet("config"),
+        ]);
 
-        const detailMap: Record<string, any> = {}
-        detailResults.forEach(r => { if (r.status === 'fulfilled') detailMap[r.value.slug] = r.value.d })
+        const detailMap: Record<string, any> = {};
+        detailResults.forEach((r) => {
+          if (r.status === "fulfilled") detailMap[r.value.slug] = r.value.d;
+        });
 
-        const prodMap: Record<string, Product[]> = {}
-        prodResults.forEach(r => { if (r.status === 'fulfilled') prodMap[r.value.slug] = r.value.p })
+        const prodMap: Record<string, Product[]> = {};
+        prodResults.forEach((r) => {
+          if (r.status === "fulfilled") prodMap[r.value.slug] = r.value.p;
+        });
 
-        setBusinesses(bizList.map(b => ({ ...b, detail: detailMap[b.slug] ?? { slug: b.slug } })))
-        setProducts(prodMap)
-        if (cfg) setConfig(cfg)
+        setBusinesses(
+          bizList.map((b) => ({
+            ...b,
+            detail: detailMap[b.slug] ?? { slug: b.slug },
+          })),
+        );
+        setProducts(prodMap);
+        if (cfg) setConfig(cfg);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    })()
+    })();
   }, []);
 
-  // ── Persist businesses list helper ──
   const persistBizList = async (list: AdminBiz[]) => {
-    await apiSave('businesses', { businesses: list.map(({ detail, ...b }) => b) })
-  }
+    await apiSave("businesses", {
+      businesses: list.map(({ detail, ...b }) => b),
+    });
+  };
 
   const saveBiz = async (b: AdminBiz) => {
-    const newList = businesses.some(x => x.id === b.id)
-      ? businesses.map(x => x.id === b.id ? b : x)
-      : [...businesses, b]
-    setBusinesses(newList)
-    if (!products[b.slug]) setProducts(prev => ({ ...prev, [b.slug]: [] }))
-    await persistBizList(newList)
-    await apiSave(`business/${b.slug}`, b.detail)
-    if (!products[b.slug]) await apiSave(`products/${b.slug}`, { products: [] })
-    showToast("✓ Negocio guardado en el servidor")
+    const newList = businesses.some((x) => x.id === b.id)
+      ? businesses.map((x) => (x.id === b.id ? b : x))
+      : [...businesses, b];
+    setBusinesses(newList);
+    if (!products[b.slug]) setProducts((prev) => ({ ...prev, [b.slug]: [] }));
+    await persistBizList(newList);
+    await apiSave(`business/${b.slug}`, b.detail);
+    if (!products[b.slug])
+      await apiSave(`products/${b.slug}`, { products: [] });
+    showToast("✓ Negocio guardado en el servidor");
   };
 
   const deleteBiz = async (slug: string) => {
     if (!confirm("¿Eliminar negocio?")) return;
-    const newList = businesses.filter(b => b.slug !== slug)
-    setBusinesses(newList)
-    setProducts(prev => { const n = { ...prev }; delete n[slug]; return n })
-    await persistBizList(newList)
-    await apiDel(`business/${slug}`)
-    await apiDel(`products/${slug}`)
-    showToast("Negocio eliminado")
+    const newList = businesses.filter((b) => b.slug !== slug);
+    setBusinesses(newList);
+    setProducts((prev) => {
+      const n = { ...prev };
+      delete n[slug];
+      return n;
+    });
+    await persistBizList(newList);
+    await apiDel(`business/${slug}`);
+    await apiDel(`products/${slug}`);
+    showToast("Negocio eliminado");
   };
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    window.location.href = '/login'
-  }
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login";
+  };
 
   const handleBackup = async () => {
-    showToast('⏳ Generando backup…')
+    showToast("⏳ Generando backup…");
     try {
-      const res = await fetch('/api/backup')
-      if (!res.ok) { showToast('⚠️ Error al generar backup'); return }
-      const blob = await res.blob()
-      const cd = res.headers.get('content-disposition') ?? ''
-      const filename = cd.match(/filename="(.+?)"/)?.[1] ?? 'catalogos-backup.zip'
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url; a.download = filename; a.click()
-      URL.revokeObjectURL(url)
-      showToast('✓ Backup descargado')
+      const res = await fetch("/api/backup");
+      if (!res.ok) {
+        showToast("⚠️ Error al generar backup");
+        return;
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get("content-disposition") ?? "";
+      const filename =
+        cd.match(/filename="(.+?)"/)?.[1] ?? "catalogos-backup.zip";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("✓ Backup descargado");
     } catch {
-      showToast('⚠️ Error al descargar backup')
+      showToast("⚠️ Error al descargar backup");
     }
-  }
+  };
 
-
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
-      <div className="text-center space-y-3">
-        <div className="text-5xl animate-pulse">🏪</div>
-        <p className="text-sm font-semibold" style={{ color: "var(--color-text-muted)" }}>
-          Cargando datos del servidor…
-        </p>
+  if (loading)
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "var(--color-bg)" }}
+      >
+        <div className="text-center space-y-3">
+          <div className="text-5xl animate-pulse">🏪</div>
+          <p
+            className="text-sm font-semibold"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            Cargando datos del servidor…
+          </p>
+        </div>
       </div>
-    </div>
-  )
+    );
 
   return (
     <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
@@ -1154,7 +1279,9 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Header */}
+      {/* ── HEADER ── */}
+      {/* CHANGED: Two-row header on mobile. Top row: back + title + lang.
+          Bottom row (sm+): action buttons; on mobile they're in a scrollable strip. */}
       <header
         className="sticky top-0 z-30 border-b backdrop-blur-md"
         style={{
@@ -1162,24 +1289,26 @@ export default function AdminPage() {
           borderColor: "var(--color-border)",
         }}
       >
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-3">
+        {/* Primary row */}
+        <div className="max-w-5xl mx-auto px-3 h-13 flex items-center gap-2">
           <Link
             href="/"
-            className="w-8 h-8 flex items-center justify-center rounded-xl text-sm font-bold hover:bg-white/10 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-xl text-sm font-bold hover:bg-white/10 transition-colors flex-shrink-0"
             style={{ color: "var(--color-text-muted)" }}
           >
             ←
           </Link>
           <span
-            className="font-black flex-1"
+            className="font-black flex-1 text-sm"
             style={{ fontFamily: "var(--font-display)" }}
           >
             ⚙️ Admin
           </span>
+          {/* Lang selector always visible */}
           <select
             value={lang}
             onChange={(e) => setLang(e.target.value as Lang)}
-            className="px-2 py-1.5 rounded-lg text-xs border outline-none"
+            className="px-2 py-1.5 rounded-lg text-xs border outline-none flex-shrink-0"
             style={{
               background: "var(--color-surface-2)",
               borderColor: "var(--color-border)",
@@ -1189,6 +1318,76 @@ export default function AdminPage() {
             <option value="es">ES</option>
             <option value="en">EN</option>
           </select>
+          {/* Action buttons — hidden on xs, shown on sm+ */}
+          <div className="hidden sm:flex items-center gap-1.5">
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                const r = new FileReader();
+                r.onload = (ev) => {
+                  try {
+                    const d = JSON.parse(ev.target?.result as string);
+                    if (d.businesses) {
+                      setBusinesses(
+                        d.businesses.map((b: Business) => ({
+                          ...b,
+                          detail: { slug: b.slug },
+                        })),
+                      );
+                      showToast("✓ Importado");
+                    }
+                  } catch {
+                    showToast("❌ JSON inválido");
+                  }
+                };
+                r.readAsText(f);
+                e.target.value = "";
+              }}
+            />
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
+              style={{
+                borderColor: "var(--color-border)",
+                color: "var(--color-text-muted)",
+              }}
+            >
+              📥 Importar
+            </button>
+            <button
+              onClick={handleBackup}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80 transition-all"
+              style={{
+                borderColor: "var(--color-border)",
+                color: "var(--color-text-muted)",
+              }}
+              title="Descargar backup ZIP"
+            >
+              💾 Backup
+            </button>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80 transition-all"
+              style={{
+                borderColor: "var(--color-border)",
+                color: "var(--color-text-muted)",
+              }}
+            >
+              🚪 Salir
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile action strip — visible only on xs */}
+        <div
+          className="sm:hidden flex items-center gap-2 px-3 pb-2 overflow-x-auto scrollbar-hide"
+          style={{ borderTop: "1px solid var(--color-border)" }}
+        >
           <input
             ref={fileRef}
             type="file"
@@ -1218,42 +1417,35 @@ export default function AdminPage() {
               e.target.value = "";
             }}
           />
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
-            style={{
-              borderColor: "var(--color-border)",
-              color: "var(--color-text-muted)",
-            }}
-          >
-            📥 Importar
-          </button>
-          <button
-            onClick={handleBackup}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80 transition-all"
-            style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
-            title="Descargar backup ZIP de todos los datos e imágenes"
-          >
-            💾 Backup
-          </button>
-          <button
-            onClick={handleLogout}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80 transition-all"
-            style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
-          >
-            🚪 Salir
-          </button>
+          {[
+            { label: "📥 Importar", action: () => fileRef.current?.click() },
+            { label: "💾 Backup", action: handleBackup },
+            { label: "🚪 Salir", action: handleLogout },
+          ].map(({ label, action }) => (
+            <button
+              key={label}
+              onClick={action}
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80 mt-2"
+              style={{
+                borderColor: "var(--color-border)",
+                color: "var(--color-text-muted)",
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 py-6">
-        {/* Tabs */}
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-5">
+        {/* ── Tabs ── */}
+        {/* CHANGED: stretch tabs to fill width on mobile */}
         <div className="flex gap-2 mb-6">
           {(["businesses", "config", "reports"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
+              className="flex-1 sm:flex-none px-3 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all"
               style={
                 tab === t
                   ? { background: "var(--color-accent)", color: "white" }
@@ -1266,7 +1458,9 @@ export default function AdminPage() {
             >
               {t === "businesses"
                 ? "🏪 Negocios"
-                : t === "reports" ? "🚩 Reportes" : "⚙️ Config"}
+                : t === "reports"
+                  ? "🚩 Reportes"
+                  : "⚙️ Config"}
             </button>
           ))}
         </div>
@@ -1276,284 +1470,375 @@ export default function AdminPage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2
-                className="text-xl font-black"
+                className="text-lg sm:text-xl font-black"
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 Negocios
               </h2>
               <Link
                 href="/registrar"
-                className="px-4 py-2 rounded-xl text-sm font-bold active:scale-95"
+                className="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold active:scale-95"
                 style={{ background: "var(--color-accent)", color: "white" }}
               >
-                + Nuevo negocio
+                + Nuevo
               </Link>
             </div>
-            {/* ── Stale hidden alert ── */}
-            {businesses.some(b => {
-              if (!b.hidden || !b.created_at) return false
-              const age = Date.now() - new Date((b as any).created_at).getTime()
-              return age > 14 * 24 * 60 * 60 * 1000
+
+            {/* Stale hidden alert */}
+            {businesses.some((b) => {
+              if (!b.hidden || !b.created_at) return false;
+              return (
+                Date.now() - new Date((b as any).created_at).getTime() >
+                14 * 24 * 60 * 60 * 1000
+              );
             }) && (
-              <div className="mb-4 p-3 rounded-2xl border flex items-start gap-3"
-                style={{ background: '#ef444415', borderColor: '#ef444440' }}>
+              <div
+                className="mb-4 p-3 rounded-2xl border flex items-start gap-3"
+                style={{ background: "#ef444415", borderColor: "#ef444440" }}
+              >
                 <span className="text-lg flex-shrink-0">⚠️</span>
                 <div>
-                  <p className="text-sm font-bold" style={{ color: '#f87171' }}>
+                  <p className="text-sm font-bold" style={{ color: "#f87171" }}>
                     Negocios ocultos pendientes de revisión
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: '#fca5a5' }}>
-                    Algunos negocios llevan más de 2 semanas ocultos. Revísalos y apruébalos o elimínalos.
+                  <p className="text-xs mt-0.5" style={{ color: "#fca5a5" }}>
+                    Algunos negocios llevan más de 2 semanas ocultos.
                   </p>
                 </div>
               </div>
             )}
+
             <div className="space-y-3">
-              {[...businesses].sort((a, b) => {
-              // Stale hidden (>14 days) come first
-              const isStale = (x: any) => x.hidden && x.created_at && Date.now() - new Date(x.created_at).getTime() > 14 * 24 * 60 * 60 * 1000
-              if (isStale(a) && !isStale(b)) return -1
-              if (!isStale(a) && isStale(b)) return 1
-              return 0
-            }).map((b) => {
-              const isStale = b.hidden && (b as any).created_at && Date.now() - new Date((b as any).created_at).getTime() > 14 * 24 * 60 * 60 * 1000
-                const palette = b.detail.palette ?? DEFAULT_PALETTE;
-                const isOpen = isOpenNow(b.detail.schedule);
-                const location = [b.detail.municipality, b.detail.province]
-                  .filter(Boolean)
-                  .join(", ");
-                return (
-                  <div
-                    key={b.slug}
-                    className="rounded-2xl border overflow-hidden transition-all hover:border-white/15"
-                    style={{
-                      background: isStale ? "#1a0a0a" : "var(--color-surface)",
-                      borderColor: isStale ? "#ef4444" : "var(--color-border)",
-                      boxShadow: isStale ? "0 0 0 1px #ef444440" : "none",
-                    }}
-                  >
-                    {/* Mini cover preview */}
+              {[...businesses]
+                .sort((a, b) => {
+                  const isStale = (x: any) =>
+                    x.hidden &&
+                    x.created_at &&
+                    Date.now() - new Date(x.created_at).getTime() >
+                      14 * 24 * 60 * 60 * 1000;
+                  if (isStale(a) && !isStale(b)) return -1;
+                  if (!isStale(a) && isStale(b)) return 1;
+                  return 0;
+                })
+                .map((b) => {
+                  const isStale =
+                    b.hidden &&
+                    (b as any).created_at &&
+                    Date.now() - new Date((b as any).created_at).getTime() >
+                      14 * 24 * 60 * 60 * 1000;
+                  const palette = b.detail.palette ?? DEFAULT_PALETTE;
+                  const isOpen = isOpenNow(b.detail.schedule);
+                  const location = [b.detail.municipality, b.detail.province]
+                    .filter(Boolean)
+                    .join(", ");
+
+                  return (
                     <div
-                      className="relative h-14 overflow-hidden"
+                      key={b.slug}
+                      className="rounded-2xl border overflow-hidden transition-all hover:border-white/15"
                       style={{
-                        background: `linear-gradient(135deg,${palette.accent}25,${palette.bg})`,
+                        background: isStale
+                          ? "#1a0a0a"
+                          : "var(--color-surface)",
+                        borderColor: isStale
+                          ? "#ef4444"
+                          : "var(--color-border)",
+                        boxShadow: isStale ? "0 0 0 1px #ef444440" : "none",
                       }}
                     >
-                      {b.image && (
-                        <img
-                          src={b.image}
-                          alt=""
-                          className="w-full h-full object-cover opacity-40"
-                        />
-                      )}
+                      {/* Cover strip */}
                       <div
-                        className="absolute inset-0"
+                        className="relative h-12 sm:h-14 overflow-hidden"
                         style={{
-                          background:
-                            "linear-gradient(to right, rgba(0,0,0,0.4), transparent)",
-                        }}
-                      />
-                      <div className="absolute top-2 left-2 flex gap-1">
-                        {[
-                          palette.accent,
-                          palette.surface,
-                          palette.priceColor,
-                        ].map((c, i) => (
-                          <div
-                            key={i}
-                            className="w-3 h-3 rounded-full border"
-                            style={{
-                              background: c,
-                              borderColor: "rgba(255,255,255,0.2)",
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <div
-                        className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold"
-                        style={{
-                          background: isOpen
-                            ? `${palette.accent}30`
-                            : "rgba(80,80,80,0.3)",
-                          color: isOpen ? palette.accent : "#888",
-                          border: `1px solid ${isOpen ? palette.accent + "40" : "#88888830"}`,
+                          background: `linear-gradient(135deg,${palette.accent}25,${palette.bg})`,
                         }}
                       >
-                        <span
-                          className="w-1.5 h-1.5 rounded-full"
+                        {b.image && (
+                          <img
+                            src={b.image}
+                            alt=""
+                            className="w-full h-full object-cover opacity-40"
+                          />
+                        )}
+                        <div
+                          className="absolute inset-0"
                           style={{
-                            background: isOpen ? palette.accent : "#888",
+                            background:
+                              "linear-gradient(to right, rgba(0,0,0,0.4), transparent)",
                           }}
                         />
-                        {isOpen
-                          ? lang === "es"
-                            ? "Abierto"
-                            : "Open"
-                          : lang === "es"
-                            ? "Cerrado"
-                            : "Closed"}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3">
-                      {/* Logo */}
-                      <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden border flex-shrink-0 -mt-6 shadow-lg border-2"
-                        style={{
-                          background: b.logo ? "transparent" : palette.accent,
-                          borderColor: "var(--color-surface)",
-                        }}
-                      >
-                        {b.logo ? (
-                          <img
-                            src={b.logo}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-xl">
-                            {b.slug === "burger-house"
-                              ? "🍔"
-                              : b.slug === "pizza-palace"
-                                ? "🍕"
-                                : "🏪"}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p
-                            className="font-black truncate"
+                        <div className="absolute top-2 left-2 flex gap-1">
+                          {[
+                            palette.accent,
+                            palette.surface,
+                            palette.priceColor,
+                          ].map((c, i) => (
+                            <div
+                              key={i}
+                              className="w-3 h-3 rounded-full border"
+                              style={{
+                                background: c,
+                                borderColor: "rgba(255,255,255,0.2)",
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <div
+                          className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
+                          style={{
+                            background: isOpen
+                              ? `${palette.accent}30`
+                              : "rgba(80,80,80,0.3)",
+                            color: isOpen ? palette.accent : "#888",
+                            border: `1px solid ${isOpen ? palette.accent + "40" : "#88888830"}`,
+                          }}
+                        >
+                          <span
+                            className="w-1.5 h-1.5 rounded-full"
                             style={{
-                              fontFamily: "var(--font-display)",
-                              color: b.hidden
-                                ? "var(--color-text-muted)"
-                                : "var(--color-text)",
+                              background: isOpen ? palette.accent : "#888",
+                            }}
+                          />
+                          <span className="hidden xs:inline">
+                            {isOpen
+                              ? lang === "es"
+                                ? "Abierto"
+                                : "Open"
+                              : lang === "es"
+                                ? "Cerrado"
+                                : "Closed"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card body */}
+                      <div className="p-3">
+                        {/* Top row: logo + name + badges */}
+                        <div className="flex items-start gap-3 mb-3">
+                          <div
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center overflow-hidden border-2 flex-shrink-0 -mt-7 shadow-lg"
+                            style={{
+                              background: b.logo
+                                ? "transparent"
+                                : palette.accent,
+                              borderColor: "var(--color-surface)",
                             }}
                           >
-                            {getL(b.name, lang) || (
-                              <span className="opacity-40">Sin nombre</span>
+                            {b.logo ? (
+                              <img
+                                src={b.logo}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-lg">🏪</span>
                             )}
-                          </p>
-                          {b.hidden && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">oculto</span>
-                          )}
-                          {b.unavailable && (
-                            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#f9731620", color: "#f97316", border: "1px solid #f9731640" }}>
-                              🚫 no disponible
-                            </span>
-                          )}
-                          {b.sponsored && (
-                            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#eab30820", color: "#eab308", border: "1px solid #eab30840" }}>
-                              ⭐ patrocinado
-                            </span>
-                          )}
-                          {b.premium && (
-                            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#a855f720", color: "#a855f7", border: "1px solid #a855f740" }}>
-                              💎 premium
-                            </span>
-                          )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            {/* Name + status badges */}
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <p
+                                className="font-black text-sm truncate"
+                                style={{
+                                  fontFamily: "var(--font-display)",
+                                  color: b.hidden
+                                    ? "var(--color-text-muted)"
+                                    : "var(--color-text)",
+                                  maxWidth: "100%",
+                                }}
+                              >
+                                {getL(b.name, lang) || (
+                                  <span className="opacity-40">Sin nombre</span>
+                                )}
+                              </p>
+                              {b.hidden && (
+                                <span className="text-xs px-1.5 py-0.5 rounded-full bg-zinc-700 text-zinc-300">
+                                  oculto
+                                </span>
+                              )}
+                              {b.unavailable && (
+                                <span
+                                  className="text-xs px-1.5 py-0.5 rounded-full"
+                                  style={{
+                                    background: "#f9731620",
+                                    color: "#f97316",
+                                    border: "1px solid #f9731640",
+                                  }}
+                                >
+                                  🚫
+                                </span>
+                              )}
+                              {b.sponsored && (
+                                <span
+                                  className="text-xs px-1.5 py-0.5 rounded-full"
+                                  style={{
+                                    background: "#eab30820",
+                                    color: "#eab308",
+                                    border: "1px solid #eab30840",
+                                  }}
+                                >
+                                  ⭐
+                                </span>
+                              )}
+                              {b.premium && (
+                                <span
+                                  className="text-xs px-1.5 py-0.5 rounded-full"
+                                  style={{
+                                    background: "#a855f720",
+                                    color: "#a855f7",
+                                    border: "1px solid #a855f740",
+                                  }}
+                                >
+                                  💎
+                                </span>
+                              )}
+                            </div>
+                            <p
+                              className="text-xs truncate"
+                              style={{ color: "var(--color-text-muted)" }}
+                            >
+                              /{b.slug}
+                              {location ? ` · 📍 ${location}` : ""}
+                            </p>
+                          </div>
                         </div>
-                        <p
-                          className="text-xs"
-                          style={{ color: "var(--color-text-muted)" }}
-                        >
-                          /{b.slug} {location ? `· 📍 ${location}` : ""}
-                        </p>
-                      </div>
-                      <div className="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
-                        <Link
-                          href={`/editar/${b.slug}`}
-                          className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
-                          style={{
-                            borderColor: "var(--color-border)",
-                            color: "var(--color-text-muted)",
-                          }}
-                        >
-                          📦 {(products[b.slug] ?? []).length}
-                        </Link>
-                        <button
-                          onClick={() => {
-                            const newList = businesses.map(x => x.slug === b.slug ? { ...x, sponsored: !x.sponsored } : x)
-                            setBusinesses(newList)
-                            persistBizList(newList)
-                          }}
-                          className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
-                          style={{
-                            borderColor: b.sponsored ? "#eab308" : "var(--color-border)",
-                            color: b.sponsored ? "#eab308" : "var(--color-text-muted)",
-                            background: b.sponsored ? "#eab30820" : "transparent",
-                          }}>
-                          {b.sponsored ? "⭐" : "☆"}
-                        </button>
-                        <button
-                          onClick={() => {
-                            const newList = businesses.map(x => x.slug === b.slug ? { ...x, premium: !x.premium } : x)
-                            setBusinesses(newList)
-                            persistBizList(newList)
-                          }}
-                          className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
-                          style={{
-                            borderColor: b.premium ? "#a855f7" : "var(--color-border)",
-                            color: b.premium ? "#a855f7" : "var(--color-text-muted)",
-                            background: b.premium ? "#a855f720" : "transparent",
-                          }}>
-                          {b.premium ? "💎" : "◇"}
-                        </button>
-                        {b.hidden && (
+
+                        {/* CHANGED: Action buttons — scrollable row on mobile, wrap on larger */}
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
+                          <Link
+                            href={`/editar/${b.slug}`}
+                            className="flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
+                            style={{
+                              borderColor: "var(--color-border)",
+                              color: "var(--color-text-muted)",
+                            }}
+                          >
+                            📦 {(products[b.slug] ?? []).length}
+                          </Link>
                           <button
                             onClick={() => {
-                              const newList = businesses.map(x => x.slug === b.slug ? { ...x, hidden: false } : x)
-                              setBusinesses(newList)
-                              persistBizList(newList)
-                              showToast("✓ Negocio aprobado y publicado")
+                              const newList = businesses.map((x) =>
+                                x.slug === b.slug
+                                  ? { ...x, sponsored: !x.sponsored }
+                                  : x,
+                              );
+                              setBusinesses(newList);
+                              persistBizList(newList);
                             }}
-                            className="px-3 py-1.5 rounded-xl text-xs font-bold border hover:opacity-80"
-                            style={{ borderColor: "#22c55e", color: "#22c55e", background: "#22c55e18" }}
+                            className="flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
+                            style={{
+                              borderColor: b.sponsored
+                                ? "#eab308"
+                                : "var(--color-border)",
+                              color: b.sponsored
+                                ? "#eab308"
+                                : "var(--color-text-muted)",
+                              background: b.sponsored
+                                ? "#eab30820"
+                                : "transparent",
+                            }}
                           >
-                            ✅ Aprobar
+                            {b.sponsored ? "⭐" : "☆"}
                           </button>
-                        )}
-                        <Link
-                          href={`/editar/${b.slug}`}
-                          className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
-                          style={{
-                            borderColor: "var(--color-accent)",
-                            color: "var(--color-accent)",
-                          }}
-                        >
-                          ✏️ Editar
-                        </Link>
-                        <Link
-                          href={`/${b.slug}?preview=1`}
-                          target="_blank"
-                          className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
-                          style={{
-                            borderColor: "var(--color-border)",
-                            color: "var(--color-text-muted)",
-                          }}
-                        >
-                          👁️ Ver
-                        </Link>
-                        <button
-                          onClick={() => { setResetSlug(b.slug); setResetPwd(""); setResetConfirm(""); }}
-                          className="px-3 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
-                          style={{ borderColor: "#3b82f640", color: "#60a5fa" }}
-                          title="Reiniciar contraseña"
-                        >
-                          🔑
-                        </button>
-                        <button
-                          onClick={() => deleteBiz(b.slug)}
-                          className="w-8 h-8 rounded-xl flex items-center justify-center border text-sm hover:opacity-80"
-                          style={{ borderColor: "#dc262640", color: "#f87171" }}
-                        >
-                          🗑️
-                        </button>
+                          <button
+                            onClick={() => {
+                              const newList = businesses.map((x) =>
+                                x.slug === b.slug
+                                  ? { ...x, premium: !x.premium }
+                                  : x,
+                              );
+                              setBusinesses(newList);
+                              persistBizList(newList);
+                            }}
+                            className="flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
+                            style={{
+                              borderColor: b.premium
+                                ? "#a855f7"
+                                : "var(--color-border)",
+                              color: b.premium
+                                ? "#a855f7"
+                                : "var(--color-text-muted)",
+                              background: b.premium
+                                ? "#a855f720"
+                                : "transparent",
+                            }}
+                          >
+                            {b.premium ? "💎" : "◇"}
+                          </button>
+                          {b.hidden && (
+                            <button
+                              onClick={() => {
+                                const newList = businesses.map((x) =>
+                                  x.slug === b.slug
+                                    ? { ...x, hidden: false }
+                                    : x,
+                                );
+                                setBusinesses(newList);
+                                persistBizList(newList);
+                                showToast("✓ Negocio aprobado y publicado");
+                              }}
+                              className="flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-bold border hover:opacity-80"
+                              style={{
+                                borderColor: "#22c55e",
+                                color: "#22c55e",
+                                background: "#22c55e18",
+                              }}
+                            >
+                              ✅ Aprobar
+                            </button>
+                          )}
+                          <Link
+                            href={`/editar/${b.slug}`}
+                            className="flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
+                            style={{
+                              borderColor: "var(--color-accent)",
+                              color: "var(--color-accent)",
+                            }}
+                          >
+                            ✏️ Editar
+                          </Link>
+                          <Link
+                            href={`/${b.slug}?preview=1`}
+                            target="_blank"
+                            className="flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
+                            style={{
+                              borderColor: "var(--color-border)",
+                              color: "var(--color-text-muted)",
+                            }}
+                          >
+                            👁️ Ver
+                          </Link>
+                          <button
+                            onClick={() => {
+                              setResetSlug(b.slug);
+                              setResetPwd("");
+                              setResetConfirm("");
+                            }}
+                            className="flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
+                            style={{
+                              borderColor: "#3b82f640",
+                              color: "#60a5fa",
+                            }}
+                            title="Reiniciar contraseña"
+                          >
+                            🔑
+                          </button>
+                          <button
+                            onClick={() => deleteBiz(b.slug)}
+                            className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center border text-sm hover:opacity-80"
+                            style={{
+                              borderColor: "#dc262640",
+                              color: "#f87171",
+                            }}
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+
               {businesses.length === 0 && (
                 <div
                   className="text-center py-16"
@@ -1566,14 +1851,13 @@ export default function AdminPage() {
             </div>
           </div>
         )}
-
       </div>
 
       {/* ── CONFIG ── */}
       {tab === "config" && (
-        <div className="space-y-5">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 pb-8 space-y-5">
           <h2
-            className="text-xl font-black"
+            className="text-lg sm:text-xl font-black"
             style={{ fontFamily: "var(--font-display)" }}
           >
             ⚙️ Configuración
@@ -1607,64 +1891,115 @@ export default function AdminPage() {
                 style={{ color: "var(--color-text-muted)" }}
               >
                 Selecciona el tema visual para la pantalla principal del
-                catálogo de negocios.
+                catálogo.
               </p>
               <PaletteEditor
                 palette={config.homePalette ?? DEFAULT_PALETTE}
                 onChange={(p) => {
                   const updated = { ...config, homePalette: p };
                   setConfig(updated);
-                  apiSave('config', updated).then(() => showToast("✓ Tema guardado"))
+                  apiSave("config", updated).then(() =>
+                    showToast("✓ Tema guardado"),
+                  );
                   applyGlobalPalette(p);
                 }}
               />
             </div>
           </div>
 
-          {/* Marquee promotions config */}
-          <div className="rounded-2xl overflow-hidden border" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
-            <div className="px-4 py-2.5 border-b" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-2)" }}>
-              <h3 className="text-sm font-bold" style={{ fontFamily: "var(--font-display)" }}>
+          {/* Marquee config */}
+          <div
+            className="rounded-2xl overflow-hidden border"
+            style={{
+              borderColor: "var(--color-border)",
+              background: "var(--color-surface)",
+            }}
+          >
+            <div
+              className="px-4 py-2.5 border-b"
+              style={{
+                borderColor: "var(--color-border)",
+                background: "var(--color-surface-2)",
+              }}
+            >
+              <h3
+                className="text-sm font-bold"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
                 📢 Banner Marquee — Promociones
               </h3>
             </div>
             <div className="p-4 space-y-3">
-              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                Selecciona los negocios o productos que aparecerán en el banner promocional. Los premium y patrocinados aparecen automáticamente si no hay selección.
+              <p
+                className="text-xs"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                Selecciona los negocios que aparecerán en el banner promocional.
               </p>
-              {businesses.map(b => (
-                <div key={b.slug} className="flex items-center justify-between p-2.5 rounded-xl border" style={{ borderColor: "var(--color-border)" }}>
+              {businesses.map((b) => (
+                <div
+                  key={b.slug}
+                  className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl border"
+                  style={{ borderColor: "var(--color-border)" }}
+                >
                   <div className="flex items-center gap-2">
-                    <input type="checkbox"
-                      checked={(config.marqueeItems ?? []).some((m: any) => m.slug === b.slug)}
-                      onChange={e => {
-                        const cur = config.marqueeItems ?? []
+                    <input
+                      type="checkbox"
+                      checked={(config.marqueeItems ?? []).some(
+                        (m: any) => m.slug === b.slug,
+                      )}
+                      onChange={(e) => {
+                        const cur = config.marqueeItems ?? [];
                         const updated = {
                           ...config,
                           marqueeItems: e.target.checked
-                            ? [...cur, { slug: b.slug, promoType: 'standard', active: true }]
-                            : cur.filter((m: any) => m.slug !== b.slug)
-                        }
-                        setConfig(updated)
-                        apiSave('config', updated)
-                      }} />
-                    <span className="text-sm font-semibold">{getL(b.name, lang)}</span>
+                            ? [
+                                ...cur,
+                                {
+                                  slug: b.slug,
+                                  promoType: "standard",
+                                  active: true,
+                                },
+                              ]
+                            : cur.filter((m: any) => m.slug !== b.slug),
+                        };
+                        setConfig(updated);
+                        apiSave("config", updated);
+                      }}
+                    />
+                    <span className="text-sm font-semibold">
+                      {getL(b.name, lang)}
+                    </span>
                   </div>
-                  {(config.marqueeItems ?? []).some((m: any) => m.slug === b.slug) && (
+                  {(config.marqueeItems ?? []).some(
+                    (m: any) => m.slug === b.slug,
+                  ) && (
                     <select
-                      value={(config.marqueeItems ?? []).find((m: any) => m.slug === b.slug)?.promoType ?? 'standard'}
-                      onChange={e => {
+                      value={
+                        (config.marqueeItems ?? []).find(
+                          (m: any) => m.slug === b.slug,
+                        )?.promoType ?? "standard"
+                      }
+                      onChange={(e) => {
                         const updated = {
                           ...config,
-                          marqueeItems: (config.marqueeItems ?? []).map((m: any) =>
-                            m.slug === b.slug ? { ...m, promoType: e.target.value } : m
-                          )
-                        }
-                        setConfig(updated)
-                        apiSave('config', updated)
+                          marqueeItems: (config.marqueeItems ?? []).map(
+                            (m: any) =>
+                              m.slug === b.slug
+                                ? { ...m, promoType: e.target.value }
+                                : m,
+                          ),
+                        };
+                        setConfig(updated);
+                        apiSave("config", updated);
                       }}
                       className="text-xs px-2 py-1 rounded-lg border outline-none"
-                      style={{ background: "var(--color-surface-2)", borderColor: "var(--color-border)", color: "var(--color-text)" }}>
+                      style={{
+                        background: "var(--color-surface-2)",
+                        borderColor: "var(--color-border)",
+                        color: "var(--color-text)",
+                      }}
+                    >
                       <option value="standard">Promo estándar</option>
                       <option value="sale">🏷️ Rebaja</option>
                       <option value="new">✨ Nuevo</option>
@@ -1677,44 +2012,69 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* Default product image/emoji */}
-          <div className="rounded-2xl overflow-hidden border"
-            style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
-            <div className="px-4 py-2.5 border-b"
-              style={{ borderColor: "var(--color-border)", background: "var(--color-surface-2)" }}>
-              <h3 className="text-sm font-bold" style={{ fontFamily: "var(--font-display)" }}>
+          {/* Default product image */}
+          <div
+            className="rounded-2xl overflow-hidden border"
+            style={{
+              borderColor: "var(--color-border)",
+              background: "var(--color-surface)",
+            }}
+          >
+            <div
+              className="px-4 py-2.5 border-b"
+              style={{
+                borderColor: "var(--color-border)",
+                background: "var(--color-surface-2)",
+              }}
+            >
+              <h3
+                className="text-sm font-bold"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
                 🛍️ Imagen por defecto de productos
               </h3>
             </div>
             <div className="p-4 space-y-3">
-              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                Se muestra cuando un producto no tiene foto. Puedes poner un emoji o subir una imagen.
+              <p
+                className="text-xs"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                Se muestra cuando un producto no tiene foto.
               </p>
-              <div className="grid grid-cols-2 gap-3">
+              {/* CHANGED: stack on mobile */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <TF
                   label="Emoji por defecto"
                   value={config.defaultProductEmoji ?? "🛍️"}
-                  onChange={v => {
-                    const updated = { ...config, defaultProductEmoji: v }
-                    setConfig(updated)
-                    apiSave('config', updated).then(() => showToast("✓ Guardado"))
+                  onChange={(v) => {
+                    const updated = { ...config, defaultProductEmoji: v };
+                    setConfig(updated);
+                    apiSave("config", updated).then(() =>
+                      showToast("✓ Guardado"),
+                    );
                   }}
                   placeholder="🛍️"
                 />
                 <TF
                   label="URL de imagen por defecto"
                   value={config.defaultProductImage ?? ""}
-                  onChange={v => {
-                    const updated = { ...config, defaultProductImage: v }
-                    setConfig(updated)
-                    apiSave('config', updated).then(() => showToast("✓ Guardado"))
+                  onChange={(v) => {
+                    const updated = { ...config, defaultProductImage: v };
+                    setConfig(updated);
+                    apiSave("config", updated).then(() =>
+                      showToast("✓ Guardado"),
+                    );
                   }}
                   placeholder="https://..."
                 />
               </div>
               {config.defaultProductImage && (
-                <img src={config.defaultProductImage} alt="" className="w-20 h-20 rounded-xl object-cover border"
-                  style={{ borderColor: "var(--color-border)" }} />
+                <img
+                  src={config.defaultProductImage}
+                  alt=""
+                  className="w-20 h-20 rounded-xl object-cover border"
+                  style={{ borderColor: "var(--color-border)" }}
+                />
               )}
             </div>
           </div>
@@ -1746,8 +2106,7 @@ export default function AdminPage() {
                 className="text-xs"
                 style={{ color: "var(--color-text-muted)" }}
               >
-                Aparece en el footer de la página principal como créditos y
-                botón de contacto.
+                Aparece en el footer como créditos y botón de contacto.
               </p>
               {(
                 [
@@ -1777,7 +2136,7 @@ export default function AdminPage() {
                         },
                       };
                       setConfig(updated);
-                      apiSave('config', updated);
+                      apiSave("config", updated);
                     }}
                     placeholder={
                       field === "name"
@@ -1804,59 +2163,120 @@ export default function AdminPage() {
 
       {/* ── REPORTS ── */}
       {tab === "reports" && (
-        <ReportsTab />
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 pb-8">
+          <ReportsTab />
+        </div>
       )}
+
       {/* ── Reset Password Modal ── */}
       {resetSlug && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setResetSlug(null)} />
-          <div className="relative w-full max-w-sm rounded-3xl p-6 space-y-4"
-            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setResetSlug(null)}
+          />
+          <div
+            className="relative w-full max-w-sm rounded-3xl p-5 sm:p-6 space-y-4"
+            style={{
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
             <div className="flex items-center justify-between">
-              <h2 className="font-black text-base" style={{ color: "var(--color-text)" }}>
+              <h2
+                className="font-black text-base"
+                style={{ color: "var(--color-text)" }}
+              >
                 🔑 Reiniciar contraseña
               </h2>
-              <button onClick={() => setResetSlug(null)} className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ background: "var(--color-surface-2)", color: "var(--color-text-muted)" }}>✕</button>
+              <button
+                onClick={() => setResetSlug(null)}
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{
+                  background: "var(--color-surface-2)",
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                ✕
+              </button>
             </div>
             <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              Negocio: <strong style={{ color: "var(--color-accent)" }}>/{resetSlug}</strong>
+              Negocio:{" "}
+              <strong style={{ color: "var(--color-accent)" }}>
+                /{resetSlug}
+              </strong>
             </p>
             <div className="space-y-3">
               <div>
-                <label className="text-xs opacity-50 block mb-1">Nueva contraseña</label>
+                <label className="text-xs opacity-50 block mb-1">
+                  Nueva contraseña
+                </label>
                 <div className="relative">
-                  <input type={resetPwdVisible ? "text" : "password"} value={resetPwd} onChange={e => setResetPwd(e.target.value)}
+                  <input
+                    type={resetPwdVisible ? "text" : "password"}
+                    value={resetPwd}
+                    onChange={(e) => setResetPwd(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
                     className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none pr-10"
-                    style={{ background: "var(--color-surface-2)", borderColor: "var(--color-border)", color: "var(--color-text)" }} />
-                  <button type="button" onClick={() => setResetPwdVisible(p => !p)}
+                    style={{
+                      background: "var(--color-surface-2)",
+                      borderColor: "var(--color-border)",
+                      color: "var(--color-text)",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setResetPwdVisible((p) => !p)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-xs opacity-50 hover:opacity-100"
-                    style={{ color: "var(--color-text-muted)" }}>{resetPwdVisible ? "🙈" : "👁️"}</button>
+                    style={{ color: "var(--color-text-muted)" }}
+                  >
+                    {resetPwdVisible ? "🙈" : "👁️"}
+                  </button>
                 </div>
               </div>
               <div>
-                <label className="text-xs opacity-50 block mb-1">Confirmar contraseña</label>
-                <input type={resetPwdVisible ? "text" : "password"} value={resetConfirm} onChange={e => setResetConfirm(e.target.value)}
+                <label className="text-xs opacity-50 block mb-1">
+                  Confirmar contraseña
+                </label>
+                <input
+                  type={resetPwdVisible ? "text" : "password"}
+                  value={resetConfirm}
+                  onChange={(e) => setResetConfirm(e.target.value)}
                   placeholder="Repite la contraseña"
                   className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
-                  style={{ background: "var(--color-surface-2)", borderColor: "var(--color-border)", color: "var(--color-text)" }} />
+                  style={{
+                    background: "var(--color-surface-2)",
+                    borderColor: "var(--color-border)",
+                    color: "var(--color-text)",
+                  }}
+                />
               </div>
               {resetPwd && resetConfirm && resetPwd !== resetConfirm && (
-                <p className="text-xs text-red-400">Las contraseñas no coinciden</p>
+                <p className="text-xs text-red-400">
+                  Las contraseñas no coinciden
+                </p>
               )}
               <button
-                disabled={resetLoading || !resetPwd || resetPwd.length < 6 || resetPwd !== resetConfirm}
+                disabled={
+                  resetLoading ||
+                  !resetPwd ||
+                  resetPwd.length < 6 ||
+                  resetPwd !== resetConfirm
+                }
                 onClick={async () => {
                   setResetLoading(true);
                   const hashRes = await fetch("/api/biz-auth/hash", {
-                    method: "POST", headers: { "Content-Type": "application/json" },
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ password: resetPwd }),
                   });
                   if (hashRes.ok) {
                     const { hash, code } = await hashRes.json();
-                    const list = businesses.map(b => b.slug === resetSlug
-                      ? { ...b, ownerPasswordHash: hash, ownerCode: code } : b);
+                    const list = businesses.map((b) =>
+                      b.slug === resetSlug
+                        ? { ...b, ownerPasswordHash: hash, ownerCode: code }
+                        : b,
+                    );
                     setBusinesses(list);
                     await persistBizList(list);
                     showToast(`✓ Contraseña actualizada. Código: ${code}`);
@@ -1865,7 +2285,8 @@ export default function AdminPage() {
                   setResetLoading(false);
                 }}
                 className="w-full py-3 rounded-xl font-black text-sm transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
-                style={{ background: "var(--color-accent)", color: "white" }}>
+                style={{ background: "var(--color-accent)", color: "white" }}
+              >
                 {resetLoading ? "⏳ Actualizando…" : "🔑 Actualizar contraseña"}
               </button>
             </div>
@@ -1878,41 +2299,55 @@ export default function AdminPage() {
 
 // ─── Reports Tab ──────────────────────────────────────────────────────────────
 function ReportsTab() {
-  const [reports, setReports] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [reports, setReports] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/reports').then(r => r.json()).then(d => {
-      setReports(d.reports ?? [])
-      setLoading(false)
-    }).catch(() => setLoading(false))
-  }, [])
+    fetch("/api/reports")
+      .then((r) => r.json())
+      .then((d) => {
+        setReports(d.reports ?? []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
   const markReviewed = async (id: string) => {
-    await fetch('/api/reports', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    await fetch("/api/reports", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
-    })
-    setReports(prev => prev.map(r => r.id === id ? { ...r, reviewed: true } : r))
-  }
+    });
+    setReports((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, reviewed: true } : r)),
+    );
+  };
 
   const REASON_LABELS: Record<string, string> = {
-    spam: 'Spam / publicidad falsa',
-    fraud: 'Fraude / estafa',
-    offensive: 'Contenido ofensivo',
-    closed: 'Negocio cerrado',
-    other: 'Otro',
-  }
+    spam: "Spam / publicidad falsa",
+    fraud: "Fraude / estafa",
+    offensive: "Contenido ofensivo",
+    closed: "Negocio cerrado",
+    other: "Otro",
+  };
 
-  if (loading) return <div className="text-center py-12 opacity-40">⏳ Cargando reportes…</div>
+  if (loading)
+    return (
+      <div className="text-center py-12 opacity-40">⏳ Cargando reportes…</div>
+    );
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-black" style={{ fontFamily: "var(--font-display)" }}>
+        <h2
+          className="text-lg sm:text-xl font-black"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
           🚩 Reportes
         </h2>
-        <span className="text-sm opacity-50">{reports.filter(r => !r.reviewed).length} sin revisar</span>
+        <span className="text-sm opacity-50">
+          {reports.filter((r) => !r.reviewed).length} sin revisar
+        </span>
       </div>
       {reports.length === 0 ? (
         <div className="text-center py-16 opacity-30">
@@ -1921,42 +2356,60 @@ function ReportsTab() {
         </div>
       ) : (
         <div className="space-y-3">
-          {reports.map(r => (
-            <div key={r.id}
+          {reports.map((r) => (
+            <div
+              key={r.id}
               className="rounded-2xl border p-4 space-y-2 transition-all"
               style={{
                 background: r.reviewed ? "var(--color-surface)" : "#1a0a0a",
                 borderColor: r.reviewed ? "var(--color-border)" : "#ef444460",
                 opacity: r.reviewed ? 0.6 : 1,
-              }}>
-              <div className="flex items-start justify-between gap-3">
+              }}
+            >
+              {/* CHANGED: stack header on mobile */}
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                 <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-sm" style={{ color: "var(--color-text)" }}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className="font-bold text-sm"
+                      style={{ color: "var(--color-text)" }}
+                    >
                       {r.name}
                     </span>
                     {r.email && (
                       <span className="text-xs opacity-50">{r.email}</span>
                     )}
-                    <span className="text-xs px-2 py-0.5 rounded-full"
-                      style={{ background: "#ef444420", color: "#f87171" }}>
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full"
+                      style={{ background: "#ef444420", color: "#f87171" }}
+                    >
                       {REASON_LABELS[r.reason] ?? r.reason}
                     </span>
                     {r.reviewed && (
-                      <span className="text-xs px-2 py-0.5 rounded-full"
-                        style={{ background: "#22c55e20", color: "#22c55e" }}>
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full"
+                        style={{ background: "#22c55e20", color: "#22c55e" }}
+                      >
                         ✓ Revisado
                       </span>
                     )}
                   </div>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-                    Negocio: <strong>/{r.slug}</strong> · {new Date(r.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  <p
+                    className="text-xs mt-0.5"
+                    style={{ color: "var(--color-text-muted)" }}
+                  >
+                    Negocio: <strong>/{r.slug}</strong> ·{" "}
+                    {new Date(r.created_at).toLocaleDateString("es", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
                   </p>
                 </div>
                 {!r.reviewed && (
                   <button
                     onClick={() => markReviewed(r.id)}
-                    className="px-3 py-1.5 rounded-xl text-xs font-bold border flex-shrink-0 hover:opacity-80"
+                    className="self-start px-3 py-1.5 rounded-xl text-xs font-bold border flex-shrink-0 hover:opacity-80"
                     style={{ borderColor: "#22c55e", color: "#22c55e" }}
                   >
                     ✓ Marcar revisado
@@ -1964,7 +2417,13 @@ function ReportsTab() {
                 )}
               </div>
               {r.description && (
-                <p className="text-sm p-3 rounded-xl" style={{ background: "var(--color-surface-2)", color: "var(--color-text-muted)" }}>
+                <p
+                  className="text-sm p-3 rounded-xl"
+                  style={{
+                    background: "var(--color-surface-2)",
+                    color: "var(--color-text-muted)",
+                  }}
+                >
                   {r.description}
                 </p>
               )}
@@ -1973,5 +2432,5 @@ function ReportsTab() {
         </div>
       )}
     </div>
-  )
+  );
 }

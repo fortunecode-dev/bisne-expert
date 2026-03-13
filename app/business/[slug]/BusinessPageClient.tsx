@@ -973,7 +973,7 @@ export function BusinessPageClient({
         </div>
 
         {/* ── Profile row ── */}
-        <div className="relative max-w-5xl mx-auto px-4 -mt-14 pb-4">
+        <div className="relative max-w-5xl mx-auto px-4 -mt-14 pb-1">
           <div className="flex items-end gap-4 mb-4">
             {/* Logo with donation button */}
             <div className="relative flex-shrink-0">
@@ -1182,7 +1182,7 @@ export function BusinessPageClient({
             (getL(detail.clientInstructions, lang) ||
               detail.clientInstructions.es) && (
               <div
-                className="mt-3 p-3 rounded-2xl border"
+                className="my-3 p-3 rounded-2xl border"
                 style={{ borderColor: border, background: surface }}
               >
                 <p className="text-xs font-bold mb-1" style={{ color: accent }}>
@@ -1242,20 +1242,21 @@ export function BusinessPageClient({
                             className="text-xs font-semibold whitespace-nowrap"
                             style={{ color: text }}
                           >
-                            {lbl}
+                            {lbl}{" "}
+                            {mod !== undefined && mod !== 0 && (
+                              <span
+                                className="text-[10px] font-bold whitespace-nowrap"
+                                style={{
+                                  color: hasDiscount ? "#22c55e" : "#f97316",
+                                }}
+                              >
+                                {hasDiscount
+                                  ? `${Math.abs(mod)}% dto.`
+                                  : `+${mod}% recargo`}
+                              </span>
+                            )}
                           </span>
-                          {mod !== undefined && mod !== 0 && (
-                            <span
-                              className="text-[10px] font-bold whitespace-nowrap"
-                              style={{
-                                color: hasDiscount ? "#22c55e" : "#f97316",
-                              }}
-                            >
-                              {hasDiscount
-                                ? `${Math.abs(mod)}% dto.`
-                                : `+${mod}% recargo`}
-                            </span>
-                          )}
+
                           {pmd.note && (
                             <span
                               className="text-[10px] opacity-60 whitespace-nowrap"

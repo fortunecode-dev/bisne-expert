@@ -1389,6 +1389,7 @@ function PaymentMethodsEditor({
 
 // ─── Schedule ─────────────────────────────────────────────────────────────────
 import type { StructuredSchedule, Weekday } from "@/types";
+import BusinessPalettePreview from "./BusinessPalettePreview";
 const DAY_LABELS: Record<Weekday, string> = {
   monday: "Lun",
   tuesday: "Mar",
@@ -1686,20 +1687,22 @@ function ProductForm({
           {!product.name.es ? "Nuevo producto" : "Editar producto"}
         </p>
       </div>
-      <Field label="Imagen principal">
-        <ImgUpload
-          value={p.image}
-          onChange={(v) => upd({ image: v })}
-          label="Foto principal"
-          square
-        />
-      </Field>
+
       <div className="mt-1">
         <p className="text-[10px] mb-1.5" style={{ color: S.muted }}>
-          Imágenes adicionales ({(p.images ?? []).length}/{maxImages - 1})
+          Imágenes ({(p.images ?? []).length}/{maxImages})
         </p>
         {/* Images shown 3-per-row always */}
         <div className="grid grid-cols-3 gap-2">
+          <div className="relative">
+            <ImgUpload
+              value={p.image}
+              onChange={(v) => upd({ image: v })}
+              label="Foto principal"
+              square
+            />
+          </div>
+
           {(p.images ?? []).map((img, i) => (
             <div key={i} className="relative">
               <ImgUpload
@@ -1729,7 +1732,7 @@ function ProductForm({
               className="aspect-square rounded-xl border-2 border-dashed flex items-center justify-center text-lg font-bold hover:opacity-80 transition-all"
               style={{ borderColor: S.border, color: S.muted }}
             >
-              +
+              + Agregar imagen
             </button>
           )}
         </div>
@@ -2102,16 +2105,7 @@ function ThemeEditor({
           🔒 {lockedMsg}
         </div>
       )}
-
-      {previewPalette && (
-        <div
-          className="px-3 py-1.5 rounded-xl text-xs font-bold text-center animate-pulse"
-          style={{ background: S.accent + "30", color: S.accent }}
-        >
-          👁️ Previsualizando — haz clic para confirmar
-        </div>
-      )}
-
+      <BusinessPalettePreview {...palette} />
       {tab === "presets" && (
         <div className="space-y-4">
           {groups.map((group) => (
