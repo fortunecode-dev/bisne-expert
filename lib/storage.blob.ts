@@ -120,4 +120,9 @@ export class BlobDriver implements StorageDriver {
       return null
     }
   }
+
+  // BlobDriver is a legacy driver — backups not supported, no-op to satisfy interface
+  async saveBackup(_filename: string, _buffer: Buffer): Promise<void> {
+    console.warn('[BlobDriver] saveBackup not implemented — use SupabaseDriver for backup support')
+  }
 }

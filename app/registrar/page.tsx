@@ -55,19 +55,19 @@ export default function RegistrarPage() {
     // Save detail (now owner-authed)
     await fetch('/api/data', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ file: `business/${slug}`, data: { ...detail, slug } }),
+      body: JSON.stringify({ file: `${slug}/business`, data: { ...detail, slug } }),
     })
 
     // Save products if any
     if ((products?.length ?? 0) > 0) {
       await fetch('/api/data', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file: `products/${slug}`, data: { products } }),
+        body: JSON.stringify({ file: `${slug}/products`, data: { products } }),
       })
     } else {
       await fetch('/api/data', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file: `products/${slug}`, data: { products: [] } }),
+        body: JSON.stringify({ file: `${slug}/products`, data: { products: [] } }),
       })
     }
 

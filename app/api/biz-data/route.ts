@@ -1,10 +1,22 @@
-// /api/biz-data — Owner-authenticated route for business mutations.
-// Handles both new registration and owner updates.
-// Invalidates cache after every successful mutation.
+// /api/biz-data (v10) — Registrar y editar negocios.
+//
+// Cambio estructural:
+//   ANTES: leía/escribía un businesses.json central con un array
+//   AHORA: cada negocio vive en {slug}/business.json independiente.
+//          "listar negocios" = listar el bucket, no leer un array.
+//
+// Al registrar un negocio nuevo:
+//   1. Escribe {slug}/business.json
+//   2. Crea {slug}/products.json vacío
+//   3. Invalida cache
+//   4. Dispara backup asíncrono al bucket "backup" con fecha+slug en el nombre
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getDriver } from '@/lib/storage'
+import { getDriver, storageKeys } from '@/lib/storage'
 import { invalidateKeys } from '@/lib/cache'
+import JSZip from 'jszip'
+
+const NO_STORE = { 'Cache-Control': 'no-store, no-cache' }
 
 function isAdminAuth(req: NextRequest) {
   return req.cookies.get('admin_session')?.value === 'authenticated'
@@ -13,20 +25,59 @@ function isBizOwnerAuth(req: NextRequest, slug: string) {
   return req.cookies.get(`biz_session_${slug}`)?.value === 'authenticated'
 }
 
+// Genera nombre de archivo de backup: "2025-01-23_14-05_mi-negocio.zip"
+function backupFilename(slug: string): string {
+  const now = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-')
+  return `${now}_${slug}.zip`
+}
+
+// Crea el ZIP con la media del negocio y lo guarda en el bucket "backup".
+// Se llama de forma fire-and-forget después de registrar.
+async function runBackup(slug: string): Promise<void> {
+  const driver = await getDriver()
+  const zip = new JSZip()
+
+  // Incluir el business.json recién creado
+  const bizRaw = await driver.readRaw(storageKeys.business(slug))
+  if (bizRaw) zip.file(`${slug}/business.json`, bizRaw)
+
+  const prodRaw = await driver.readRaw(storageKeys.products(slug))
+  if (prodRaw) zip.file(`${slug}/products.json`, prodRaw)
+
+  // Incluir todas las imágenes del slug (puede estar vacío en registro inicial)
+  const mediaKeys = await driver.listFileKeys(`${slug}/`)
+  await Promise.all(
+    mediaKeys.map(async (k) => {
+      const buf = await driver.readFile(k)
+      if (buf) zip.file(`media/${k}`, buf)
+    })
+  )
+
+  const zipBuf = await zip.generateAsync({
+    type: 'nodebuffer',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 },
+  }) as Buffer
+
+  await driver.saveBackup(backupFilename(slug), zipBuf)
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const { slug, updates, isNew, ownerPasswordHash, ownerCode } = body
 
-  if (!slug) return NextResponse.json({ error: 'slug requerido' }, { status: 400 })
+  if (!slug || !/^[a-z0-9-]+$/.test(slug))
+    return NextResponse.json({ error: 'slug inválido' }, { status: 400 })
 
   const driver = await getDriver()
-  const bizData: any = await driver.readJSON('businesses') ?? { businesses: [] }
-  const businesses: any[] = bizData.businesses ?? []
 
+  // ── Registrar negocio nuevo ───────────────────────────────────────────────
   if (isNew) {
-    if (businesses.find((b: any) => b.slug === slug)) {
+    // Verificar que el slug no exista ya
+    const existing = await driver.readJSON(storageKeys.business(slug))
+    if (existing)
       return NextResponse.json({ error: `El slug "${slug}" ya está en uso` }, { status: 409 })
-    }
+
     const newBiz = {
       ...updates,
       slug,
@@ -35,38 +86,44 @@ export async function POST(req: NextRequest) {
       hidden: true,
       created_at: new Date().toISOString(),
     }
-    await driver.writeJSON('businesses', { businesses: [...businesses, newBiz] })
-    // Invalidate businesses cache
-    invalidateKeys(['businesses'])
-    return NextResponse.json({ ok: true, slug, code: ownerCode }, { headers: { 'Cache-Control': 'no-store' } })
+
+    // Escribir archivos independientes
+    await driver.writeJSON(storageKeys.business(slug), newBiz)
+    await driver.writeJSON(storageKeys.products(slug), { products: [] })
+
+    // Invalidar cache de la lista de negocios
+    invalidateKeys([storageKeys.business(slug)])
+
+    // Backup asíncrono — no bloquea la respuesta
+    runBackup(slug).catch(e => console.error('[biz-data] backup failed:', e))
+
+    return NextResponse.json({ ok: true, slug, code: ownerCode }, { headers: NO_STORE })
   }
 
-  // Edit: requires admin or owner
-  if (!isAdminAuth(req) && !isBizOwnerAuth(req, slug)) {
+  // ── Editar negocio existente ──────────────────────────────────────────────
+  if (!isAdminAuth(req) && !isBizOwnerAuth(req, slug))
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  }
 
-  const ownerAllowedFields = [
+  const existing: any = await driver.readJSON(storageKeys.business(slug))
+  if (!existing)
+    return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 })
+
+  const ownerAllowed = [
     'name', 'description', 'slogan', 'logo', 'image', 'unavailable',
     'categories', 'seo', 'coverImages',
   ]
-  const adminAllowedFields = [
-    ...ownerAllowedFields,
+  const adminAllowed = [
+    ...ownerAllowed,
     'sponsored', 'premium', 'hidden', 'slug',
     'ownerPasswordHash', 'ownerCode',
   ]
-  const allowed = isAdminAuth(req) ? adminAllowedFields : ownerAllowedFields
+  const allowed = isAdminAuth(req) ? adminAllowed : ownerAllowed
 
-  const safeUpdates: any = {}
-  for (const key of allowed) {
-    if (key in updates) safeUpdates[key] = updates[key]
-  }
+  const safe: any = {}
+  for (const k of allowed) if (k in updates) safe[k] = updates[k]
 
-  const updatedList = businesses.map((b: any) =>
-    b.slug === slug ? { ...b, ...safeUpdates } : b
-  )
-  await driver.writeJSON('businesses', { businesses: updatedList })
-  // Invalidate businesses + specific business detail
-  invalidateKeys(['businesses', `business/${slug}`])
-  return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
+  await driver.writeJSON(storageKeys.business(slug), { ...existing, ...safe })
+  invalidateKeys([storageKeys.business(slug)])
+
+  return NextResponse.json({ ok: true }, { headers: NO_STORE })
 }

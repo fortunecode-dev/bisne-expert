@@ -1138,22 +1138,19 @@ export default function AdminPage() {
     setLoading(true);
     (async () => {
       try {
-        const bizData = await apiGet("businesses");
-        if (!bizData) return;
-        const bizList: Business[] = bizData.businesses;
+        // v10: listar slugs del bucket listando keys que matcheen {slug}/business
+        // Se obtiene via un endpoint de listado, o leyendo la lista de negocios
+        // a través de getCachedBusinesses en el servidor. En el admin (cliente)
+        // llamamos al endpoint /api/data/list-slugs que devuelve los slugs.
+        // Como no tenemos ese endpoint, usamos /api/businesses para listar.
+        const slugsRes = await fetch("/api/businesses");
+        if (!slugsRes.ok) return;
+        const bizList: Business[] = await slugsRes.json();
 
-        const [detailResults, prodResults, cfg] = await Promise.all([
+        const [prodResults, cfg] = await Promise.all([
           Promise.allSettled(
             bizList.map((b) =>
-              apiGet(`business/${b.slug}`).then((d) => ({
-                slug: b.slug,
-                d: d ?? { slug: b.slug },
-              })),
-            ),
-          ),
-          Promise.allSettled(
-            bizList.map((b) =>
-              apiGet(`products/${b.slug}`).then((d) => ({
+              apiGet(`${b.slug}/products`).then((d) => ({
                 slug: b.slug,
                 p: d?.products ?? [],
               })),
@@ -1162,20 +1159,16 @@ export default function AdminPage() {
           apiGet("config"),
         ]);
 
-        const detailMap: Record<string, any> = {};
-        detailResults.forEach((r) => {
-          if (r.status === "fulfilled") detailMap[r.value.slug] = r.value.d;
-        });
-
         const prodMap: Record<string, Product[]> = {};
         prodResults.forEach((r) => {
           if (r.status === "fulfilled") prodMap[r.value.slug] = r.value.p;
         });
 
+        // En v10 el business ya incluye el detail (mismo archivo)
         setBusinesses(
-          bizList.map((b) => ({
+          bizList.map((b: any) => ({
             ...b,
-            detail: detailMap[b.slug] ?? { slug: b.slug },
+            detail: b,  // business y detail son el mismo objeto
           })),
         );
         setProducts(prodMap);
@@ -1186,10 +1179,13 @@ export default function AdminPage() {
     })();
   }, []);
 
-  const persistBizList = async (list: AdminBiz[]) => {
-    await apiSave("businesses", {
-      businesses: list.map(({ detail, ...b }) => b),
-    });
+  // v10: no hay businesses.json central — cada negocio se guarda en {slug}/business.json
+  // Esta función guarda solo los campos de "estado" (hidden, sponsored, premium, etc.)
+  // que el admin puede cambiar inline sin pasar por el editor completo.
+  const persistBizField = async (slug: string, fields: Partial<Business>) => {
+    const current = await apiGet(`${slug}/business`);
+    if (!current) return;
+    await apiSave(`${slug}/business`, { ...current, ...fields });
   };
 
   const saveBiz = async (b: AdminBiz) => {
@@ -1198,10 +1194,11 @@ export default function AdminPage() {
       : [...businesses, b];
     setBusinesses(newList);
     if (!products[b.slug]) setProducts((prev) => ({ ...prev, [b.slug]: [] }));
-    await persistBizList(newList);
-    await apiSave(`business/${b.slug}`, b.detail);
+    // v10: guardar en {slug}/business.json (business + detail fusionados)
+    const { detail, ...bizFields } = b;
+    await apiSave(`${b.slug}/business`, { ...bizFields, ...detail, slug: b.slug });
     if (!products[b.slug])
-      await apiSave(`products/${b.slug}`, { products: [] });
+      await apiSave(`${b.slug}/products`, { products: [] });
     showToast("✓ Negocio guardado en el servidor");
   };
 
@@ -1214,9 +1211,9 @@ export default function AdminPage() {
       delete n[slug];
       return n;
     });
-    await persistBizList(newList);
-    await apiDel(`business/${slug}`);
-    await apiDel(`products/${slug}`);
+    // v10: eliminar ambos archivos del slug
+    await apiDel(`${slug}/business`);
+    await apiDel(`${slug}/products`);
     showToast("Negocio eliminado");
   };
 
@@ -1723,7 +1720,7 @@ export default function AdminPage() {
                                   : x,
                               );
                               setBusinesses(newList);
-                              persistBizList(newList);
+                              persistBizField(b.slug, { sponsored: !b.sponsored });
                             }}
                             className="flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
                             style={{
@@ -1748,7 +1745,7 @@ export default function AdminPage() {
                                   : x,
                               );
                               setBusinesses(newList);
-                              persistBizList(newList);
+                              persistBizField(b.slug, { premium: !b.premium });
                             }}
                             className="flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold border hover:opacity-80"
                             style={{
@@ -1774,7 +1771,7 @@ export default function AdminPage() {
                                     : x,
                                 );
                                 setBusinesses(newList);
-                                persistBizList(newList);
+                                persistBizField(b.slug, { hidden: false });
                                 showToast("✓ Negocio aprobado y publicado");
                               }}
                               className="flex-shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-bold border hover:opacity-80"
@@ -2278,7 +2275,7 @@ export default function AdminPage() {
                         : b,
                     );
                     setBusinesses(list);
-                    await persistBizList(list);
+                    await persistBizField(resetSlug, { ownerPasswordHash: hash, ownerCode: code });
                     showToast(`✓ Contraseña actualizada. Código: ${code}`);
                     setResetSlug(null);
                   }

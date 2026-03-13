@@ -973,7 +973,7 @@ export function BusinessPageClient({
         </div>
 
         {/* ── Profile row ── */}
-        <div className="relative max-w-5xl mx-auto px-4 -mt-14 pb-1">
+        <div className="relative max-w-5xl mx-auto px-4 -mt-14">
           <div className="flex items-end gap-4 mb-4">
             {/* Logo with donation button */}
             <div className="relative flex-shrink-0">
@@ -1209,7 +1209,7 @@ export function BusinessPageClient({
               return (
                 <div>
                   <p
-                    className="text-[10px] font-semibold uppercase tracking-wide mb-1.5"
+                    className="text-[10px] font-semibold uppercase tracking-wide mt-2"
                     style={{ color: textMuted }}
                   >
                     {lang === "es" ? "Métodos de pago" : "Payment methods"}

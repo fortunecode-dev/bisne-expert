@@ -162,3 +162,44 @@ The `uploads` bucket is **public** — public read + unrestricted write via poli
 
 **Migration script fails with "bucket not found"**
 → Run the SQL setup first, or let the script create buckets automatically (it will try).
+
+---
+
+## v10 — Nueva estructura de buckets
+
+### Cambio de estructura de datos
+
+En v10 cada negocio es **completamente independiente** — no hay un `businesses.json` central que se pueda pisar:
+
+```
+bucket "data"
+  {slug}/business.json    ← datos del negocio (antes: businesses.json array + business/{slug}.json)
+  {slug}/products.json    ← productos (antes: products/{slug}.json)
+  config.json             ← sin cambios
+  reports.json            ← sin cambios
+
+bucket "uploads"  (público)
+  {slug}/{timestamp}-{name}.ext   ← imágenes agrupadas por negocio
+
+bucket "backup"   (privado — NUEVO)
+  {YYYY-MM-DD}_{HH-MM}_{slug}.zip ← backup automático al registrar un negocio nuevo
+```
+
+### Crear el bucket "backup" en Supabase
+
+```sql
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('backup', 'backup', false);
+```
+
+O desde el dashboard: Storage → New bucket → nombre `backup` → privado.
+
+### Migración desde v9
+
+```bash
+SUPABASE_URL=https://xxx.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=eyJ... \
+npx tsx scripts/migrate-to-v10.ts
+```
+
+El script lee `businesses.json` y `business/{slug}.json` / `products/{slug}.json` y escribe los archivos nuevos. Los archivos viejos **no se eliminan** automáticamente — puedes borrarlos manualmente después de verificar.

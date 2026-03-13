@@ -94,3 +94,88 @@ la peticion de login despues de autoregistrar un negocio debe esperar que la pet
 
 
 segun la cantidad de elementos que tenga el marque aplicar un difuminado en los extremos para que no se vean elementos repetidos mas de una vez
+
+
+{
+  business: {
+    logo: 'https://kadpsioieqfcafvmhiru.supabase.co/storage/v1/object/public/uploads/1773344717917-logo.jpg',
+    image: 'https://kadpsioieqfcafvmhiru.supabase.co/storage/v1/object/public/uploads/1773344774552-portada.jpg',
+    name: { es: 'Detalles Dani', en: '' },
+    slug: 'detalles-dani',
+    slogan: { es: 'Amor en cada detalle', en: '' },
+    description: {
+      es: 'Productos hechos a mano con amor para esa personita especial',
+      en: ''
+    },
+    categories: [ 'Rosas', 'Cuadros', 'Ramos' ],
+    id: 1773344903945,
+    ownerPasswordHash: '96b0270e988d66e3c9d8f6618bdb7b4d643b5277e6d4351921490619d79bcc84',
+    ownerCode: 'KSJO50',
+    hidden: false,
+    created_at: '2026-03-12T19:48:24.546Z',
+    premium: true
+  },
+  detail: {
+    businessCategories: [ 'Rosas', 'Cuadros', 'Ramos', 'Cajas', 'Cartel' ],
+    slug: 'detalles-dani',
+    palette: {
+      accent: '#e11d48',
+      accentText: '#fff',
+      accentSoft: '#fff1f2',
+      bg: '#fff5f7',
+      surface: '#ffffff',
+      surface2: '#ffe4e6',
+      border: '#fecdd3',
+      text: '#4c0519',
+      textMuted: '#be123c',
+      priceColor: '#fb7185',
+      name: '💘 San Valentín Clara'
+    },
+    province: 'Matanazas',
+    municipality: 'Jagüey Grande',
+    addresses: [ [Object] ],
+    address: { es: 'Edificio 71, Tercer Piso, Apartamento 6', en: '' },
+    phone: '5354447470',
+    paymentMethodDetails: [ [Object], [Object], [Object] ],
+    paymentMethods: [ 'cash', 'zelle', 'paypal' ],
+    socialLinks: {
+      instagram: 'https://www.instagram.com/detalles.dani',
+      facebook: 'https://www.facebook.com/daniela.martinez.468558',
+      whatsapp: 'https://wa.me/5354447470'
+    },
+    clientInstructions: {
+      es: 'Los productos son de ejemplo, pueden variar en tamaño, forma y color, a solicitud del cliente.',
+      en: ''
+    },
+    schedule: { alwaysOpen: false, days: [Object] }
+  }
+}
+
+
+La belleza que deseas obtener esta aquí en Royal.
+5351628189
+https://www.instagram.com/royalgrandsalon.oficiall
+Pestañas que encajan con tu estilo, Laminado o Lifting de pestañas con el toque extra de henna. 💗
+Cejas con henna: belleza y precisión. 🎯🌸
+🦷 Nuestro blanqueamiento dental logra una sonrisa radiante que impacta a primera vista.
+¿Te gustaría aprender a realizar faciales profesionales y comenzar tu propio negocio en el mundo de la estética?
+En esta formación aprenderás desde diagnóstico de la piel hasta protocolos profesionales de limpieza facial, aparatología estética y además recibirás herramientas para gestionar tu propio negocio de belleza.
+💼 Incluye:
+• Anatomía básica y tipos de piel
+• Diagnóstico facial profesional
+• Limpieza facial profunda paso a paso
+• Uso de vapor ozono y extracción de comedones
+• Alta frecuencia
+• Microdermoabrasión
+• Protocolos de higiene y bioseguridad
+• Práctica supervisada en modelo real
+📈 Además aprenderás:
+• Cómo calcular precios de servicios
+• Cómo estructurar faciales rentables
+• Cómo atraer y fidelizar clientas
+🎓 Al finalizar recibirás:
+✔ Certificado de capacitación
+✔ Manual digital de apoyo
+✔ Asesoría posterior al curso
+⚠ Cupos limitados para garantizar atención personalizada.
+📩 Escríbenos por WhatsApp o mensaje directo para reservar tu vacante.

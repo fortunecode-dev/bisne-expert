@@ -1,21 +1,18 @@
-// ─── Supabase Storage Driver ──────────────────────────────────────────────────
-// JSON "files" → stored in Supabase Storage bucket "data" as {key}.json
-// Images       → stored in Supabase Storage bucket "uploads"
+// ─── Supabase Storage Driver (v10) ────────────────────────────────────────────
 //
-// Bucket setup (do once in Supabase dashboard or via migration):
-//   "data"    — private bucket, accessed via service role key
-//   "uploads" — public bucket, files served via Supabase CDN
+// Buckets:
+//   "data"    privado  — {slug}/business.json  {slug}/products.json  config.json  reports.json
+//   "uploads" público  — {slug}/{filename}.ext
+//   "backup"  privado  — {date}_{slug}.zip
 //
-// Required env vars:
-//   SUPABASE_URL              — e.g. https://xxxx.supabase.co
-//   SUPABASE_SERVICE_ROLE_KEY — service role key (never exposed to client)
-//   NEXT_PUBLIC_SUPABASE_URL  — same URL, for client-side image URLs
+// Vars requeridas: SUPABASE_URL  SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import type { StorageDriver } from './storage'
 
-const DATA_BUCKET = 'data'
+const DATA_BUCKET    = 'data'
 const UPLOADS_BUCKET = 'uploads'
+const BACKUP_BUCKET  = 'backup'
 
 function getClient(): SupabaseClient {
   const url = process.env.SUPABASE_URL
@@ -29,118 +26,90 @@ function getClient(): SupabaseClient {
 
 export class SupabaseDriver implements StorageDriver {
   private sb: SupabaseClient
-
-  constructor() {
-    this.sb = getClient()
-  }
+  constructor() { this.sb = getClient() }
 
   // ── JSON ──────────────────────────────────────────────────────────────────
 
   async readJSON(key: string): Promise<unknown | null> {
     try {
-      const path = `${key}.json`
       const { data, error } = await this.sb.storage
-        .from(DATA_BUCKET)
-        .download(path)
+        .from(DATA_BUCKET).download(`${key}.json`)
       if (error || !data) return null
-      const text = await data.text()
-      return JSON.parse(text)
-    } catch {
-      return null
-    }
+      return JSON.parse(await data.text())
+    } catch { return null }
   }
 
   async writeJSON(key: string, data: unknown): Promise<void> {
-    const path = `${key}.json`
-    const content = JSON.stringify(data, null, 2)
-    // Pass as string — Supabase accepts string | ArrayBuffer | ArrayBufferView | Blob | File
-    const { error } = await this.sb.storage
-      .from(DATA_BUCKET)
-      .upload(path, content, {
-        contentType: 'application/json',
-        upsert: true,
-        cacheControl: '0',
-      })
+    const { error } = await this.sb.storage.from(DATA_BUCKET).upload(
+      `${key}.json`,
+      JSON.stringify(data, null, 2),
+      { contentType: 'application/json', upsert: true, cacheControl: '0' }
+    )
     if (error) throw new Error(`writeJSON(${key}) failed: ${error.message}`)
   }
 
   async deleteJSON(key: string): Promise<void> {
-    const path = `${key}.json`
-    const { error } = await this.sb.storage.from(DATA_BUCKET).remove([path])
-    if (error && !error.message.includes('not found')) {
+    const { error } = await this.sb.storage.from(DATA_BUCKET).remove([`${key}.json`])
+    if (error && !error.message.toLowerCase().includes('not found'))
       throw new Error(`deleteJSON(${key}) failed: ${error.message}`)
-    }
   }
 
   async listJSONKeys(prefix?: string): Promise<string[]> {
-    // Supabase list() is not recursive — we handle nested paths by listing subdirs
-    const results = await this._listRecursive(DATA_BUCKET, prefix ?? '')
-    return results
-      .filter(p => p.endsWith('.json'))
-      .map(p => p.slice(0, -5)) // strip .json
+    const all = await this._listRecursive(DATA_BUCKET, prefix ?? '')
+    return all.filter(p => p.endsWith('.json')).map(p => p.slice(0, -5))
   }
 
-  // ── Files ─────────────────────────────────────────────────────────────────
+  // ── Imágenes — key: "{slug}/{filename}" ───────────────────────────────────
 
   async uploadFile(key: string, buffer: Buffer, contentType: string): Promise<string> {
-    // key = "uploads/timestamp-name.jpg"
-    // Strip leading "uploads/" — bucket is already "uploads"
-    const path = key.startsWith('uploads/') ? key.slice('uploads/'.length) : key
-    // Copy into a plain ArrayBuffer to satisfy TypeScript's strict Blob types
-    const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer
-
-    const { data, error } = await this.sb.storage
-      .from(UPLOADS_BUCKET)
-      .upload(path, arrayBuffer, {
-        contentType,
-        upsert: false,
-        cacheControl: '604800', // 7 days CDN cache on images
-      })
+    const ab = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer
+    const { error } = await this.sb.storage.from(UPLOADS_BUCKET).upload(key, ab, {
+      contentType, upsert: false, cacheControl: '604800',
+    })
     if (error) throw new Error(`uploadFile(${key}) failed: ${error.message}`)
-
-    // Return public URL (Supabase Storage CDN)
-    const { data: urlData } = this.sb.storage.from(UPLOADS_BUCKET).getPublicUrl(path)
-    return urlData.publicUrl
+    const { data } = this.sb.storage.from(UPLOADS_BUCKET).getPublicUrl(key)
+    return data.publicUrl
   }
 
   async deleteFile(key: string): Promise<void> {
-    const path = key.startsWith('uploads/') ? key.slice('uploads/'.length) : key
-    const { error } = await this.sb.storage.from(UPLOADS_BUCKET).remove([path])
-    if (error && !error.message.includes('not found')) {
+    const { error } = await this.sb.storage.from(UPLOADS_BUCKET).remove([key])
+    if (error && !error.message.toLowerCase().includes('not found'))
       throw new Error(`deleteFile(${key}) failed: ${error.message}`)
-    }
   }
 
   async listFileKeys(prefix?: string): Promise<string[]> {
-    const stripPrefix = 'uploads/'
-    const innerPrefix = prefix?.startsWith(stripPrefix) ? prefix.slice(stripPrefix.length) : (prefix ?? '')
-    const paths = await this._listRecursive(UPLOADS_BUCKET, innerPrefix)
-    return paths.map(p => `uploads/${p}`)
+    return this._listRecursive(UPLOADS_BUCKET, prefix ?? '')
   }
+
+  // ── Backup ────────────────────────────────────────────────────────────────
+
+  async saveBackup(filename: string, buffer: Buffer): Promise<void> {
+    const ab = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer
+    const { error } = await this.sb.storage.from(BACKUP_BUCKET).upload(filename, ab, {
+      contentType: 'application/zip', upsert: true, cacheControl: '0',
+    })
+    if (error) throw new Error(`saveBackup(${filename}) failed: ${error.message}`)
+  }
+
+  // ── Lecturas raw (para /api/backup download) ──────────────────────────────
 
   async readRaw(key: string): Promise<Buffer | null> {
     try {
-      const path = `${key}.json`
-      const { data, error } = await this.sb.storage.from(DATA_BUCKET).download(path)
+      const { data, error } = await this.sb.storage.from(DATA_BUCKET).download(`${key}.json`)
       if (error || !data) return null
       return Buffer.from(await data.arrayBuffer())
-    } catch {
-      return null
-    }
+    } catch { return null }
   }
 
   async readFile(key: string): Promise<Buffer | null> {
     try {
-      const path = key.startsWith('uploads/') ? key.slice('uploads/'.length) : key
-      const { data, error } = await this.sb.storage.from(UPLOADS_BUCKET).download(path)
+      const { data, error } = await this.sb.storage.from(UPLOADS_BUCKET).download(key)
       if (error || !data) return null
       return Buffer.from(await data.arrayBuffer())
-    } catch {
-      return null
-    }
+    } catch { return null }
   }
 
-  // ── Internal helpers ──────────────────────────────────────────────────────
+  // ── Helpers internos ──────────────────────────────────────────────────────
 
   private async _listRecursive(bucket: string, prefix: string): Promise<string[]> {
     const results: string[] = []
@@ -149,19 +118,17 @@ export class SupabaseDriver implements StorageDriver {
   }
 
   private async _listDir(bucket: string, path: string, acc: string[]): Promise<void> {
-    const { data, error } = await this.sb.storage.from(bucket).list(path || undefined, {
-      limit: 200,
-      sortBy: { column: 'name', order: 'asc' },
-    })
+    const { data, error } = await this.sb.storage.from(bucket).list(
+      path || undefined,
+      { limit: 200, sortBy: { column: 'name', order: 'asc' } }
+    )
     if (error || !data) return
-
     for (const item of data) {
-      const fullPath = path ? `${path}/${item.name}` : item.name
+      const full = path ? `${path}/${item.name}` : item.name
       if (item.metadata === null) {
-        // It's a "folder" — recurse
-        await this._listDir(bucket, fullPath, acc)
+        await this._listDir(bucket, full, acc)  // carpeta → recursivo
       } else {
-        acc.push(fullPath)
+        acc.push(full)
       }
     }
   }

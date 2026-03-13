@@ -34,13 +34,13 @@ export default function EditarPage() {
 
   useEffect(() => {
     if (!authed) return
+    // v10: un solo archivo por negocio — {slug}/business.json contiene todo
     Promise.all([
-      fetch(`/api/data?file=businesses`).then(r => r.json()),
-      fetch(`/api/data?file=business/${slug}`).then(r => r.ok ? r.json() : {}),
-      fetch(`/api/data?file=products/${slug}`).then(r => r.ok ? r.json() : { products: [] }),
-    ]).then(([bizData, detail, prodData]) => {
-      const business = bizData?.businesses?.find((b: any) => b.slug === slug) ?? {}
-      setInitial({ business, detail: detail ?? {}, products: prodData?.products ?? [] })
+      fetch(`/api/data?file=${slug}/business`).then(r => r.ok ? r.json() : {}),
+      fetch(`/api/data?file=${slug}/products`).then(r => r.ok ? r.json() : { products: [] }),
+    ]).then(([bizData, prodData]) => {
+      // business y detail son el mismo objeto en v10
+      setInitial({ business: bizData ?? {}, detail: bizData ?? {}, products: prodData?.products ?? [] })
     })
   }, [authed, slug])
 
@@ -56,30 +56,28 @@ export default function EditarPage() {
   }
 
   const handleSave = async ({ business, detail, products }: any) => {
+    // v10: fusionar business + detail en {slug}/business.json
+    const merged = { ...business, ...detail, slug }
+
     if (isAdmin) {
-      const bizListRes = await fetch('/api/data?file=businesses').then(r => r.json())
-      const list: any[] = bizListRes?.businesses ?? []
-      const newList = list.some(b => b.slug === slug)
-        ? list.map(b => b.slug === slug ? { ...b, ...business } : b)
-        : [...list, { ...business, slug }]
+      // Admin escribe directamente
       await fetch('/api/data', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file: 'businesses', data: { businesses: newList } }),
+        body: JSON.stringify({ file: `${slug}/business`, data: merged }),
       })
     } else {
+      // Dueño: campos permitidos vía /api/biz-data
       const bizRes = await fetch('/api/biz-data', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, updates: business }),
+        body: JSON.stringify({ slug, updates: merged }),
       })
       if (!bizRes.ok) { const err = await bizRes.json(); throw new Error(err.error || 'Error') }
     }
+
+    // Productos siempre via /api/data (auth por cookie biz_session_)
     await fetch('/api/data', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ file: `business/${slug}`, data: { ...detail, slug } }),
-    })
-    await fetch('/api/data', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ file: `products/${slug}`, data: { products: products ?? [] } }),
+      body: JSON.stringify({ file: `${slug}/products`, data: { products: products ?? [] } }),
     })
     setSaved(true); setTimeout(() => setSaved(false), 2500)
   }
@@ -94,12 +92,12 @@ export default function EditarPage() {
         body: JSON.stringify({ slug, password: resetPwd }),
       })
       const { hash, code } = await hashRes.json()
-      // Update businesses.json
-      const bizListRes = await fetch('/api/data?file=businesses').then(r => r.json())
-      const list: any[] = bizListRes?.businesses ?? []
+      // v10: actualizar directamente {slug}/business.json
+      const bizRes = await fetch(`/api/data?file=${slug}/business`)
+      const bizData = bizRes.ok ? await bizRes.json() : {}
       await fetch('/api/data', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file: 'businesses', data: { businesses: list.map(b => b.slug === slug ? { ...b, ownerPasswordHash: hash, ownerCode: code } : b) } }),
+        body: JSON.stringify({ file: `${slug}/business`, data: { ...bizData, ownerPasswordHash: hash, ownerCode: code } }),
       })
       setResetDone(true)
       setTimeout(() => { setShowReset(false); setResetDone(false); setResetPwd(''); setResetConfirm('') }, 2500)
